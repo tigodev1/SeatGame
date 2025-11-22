@@ -117,6 +117,11 @@ local function createCamera(vp)
 end
 
 local function setupViewport(vp, model, rotate, owned)
+	-- Set ViewportFrame properties to remove any colored outline/tint
+	vp.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	vp.Ambient = Color3.fromRGB(255, 255, 255)
+	vp.LightColor = Color3.fromRGB(255, 255, 255)
+
 	local cam = createCamera(vp)
 	local clone = model:Clone()
 	clone.Parent = vp
