@@ -45,8 +45,8 @@ local rollSoundInstance = nil
 local idleRollConnection = nil
 
 --// Config
-local SPIN_DURATION = 4
-local SLOWDOWN_TIME = 1
+local SPIN_DURATION = 5
+local SLOWDOWN_TIME = 1.5
 local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
@@ -253,8 +253,10 @@ local function performSpin()
 	end
 
 	local models = seatModels:GetChildren()
+	local itemsPerSet = 50
+	local numberOfSets = 3
 
-	for i = 1, 50 do
+	for i = 1, itemsPerSet * numberOfSets do
 		local randomModel = models[math.random(1, #models)]
 		local display = createSpinDisplay(randomModel)
 		display.LayoutOrder = i
@@ -286,12 +288,9 @@ local function performSpin()
 
 	local itemWidth = firstItem.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetIndex = math.random(30, 45)
+	local targetIndex = math.random(110, 130)
 	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
-	local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
-
-	local fullRotations = 2
-	local targetScroll = (maxScroll * fullRotations) + targetPosition
+	local targetScroll = targetPosition
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
