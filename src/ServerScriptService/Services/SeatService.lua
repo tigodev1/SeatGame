@@ -95,8 +95,10 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Parent chair to character
-	chairClone.Parent = character
+	-- Disable jumping from unseating
+	if seatPart:IsA("Seat") then
+		seatPart.Disabled = false
+	end
 
 	-- Weld all chair parts to the AnchorPart FIRST
 	for _, part in chairClone:GetDescendants() do
@@ -107,11 +109,6 @@ local function attachChairToPlayer(player, chairName)
 			partWeld.Parent = part
 		end
 	end
-
-	-- Teleport player to Seat position to sit them on the seat
-	task.wait(0.1)
-	humanoidRootPart.CFrame = seatPart.CFrame
-	task.wait(0.1)
 
 	-- Raycast to find ground under player
 	local playerPosition = humanoidRootPart.Position
@@ -132,6 +129,9 @@ local function attachChairToPlayer(player, chairName)
 	local anchorCFrame = CFrame.new(anchorPosition) * CFrame.Angles(0, math.atan2(lookDirection.X, lookDirection.Z), 0)
 	anchorPart.CFrame = anchorCFrame
 
+	-- Parent chair to workspace so it's positioned correctly
+	chairClone.Parent = Workspace
+
 	-- Weld AnchorPart to player's HumanoidRootPart so chair follows movement
 	local anchorWeld = Instance.new("Weld")
 	anchorWeld.Name = "ChairToPlayerWeld"
@@ -141,6 +141,10 @@ local function attachChairToPlayer(player, chairName)
 	anchorWeld.C0 = humanoidRootPart.CFrame:ToObjectSpace(anchorPart.CFrame)
 	anchorWeld.C1 = CFrame.new(0, 0, 0)
 	anchorWeld.Parent = anchorPart
+
+	-- Now teleport player to Seat position to sit them on the seat
+	task.wait(0.1)
+	humanoidRootPart.CFrame = seatPart.CFrame
 
 	-- Store reference
 	playerChairs[player] = chairClone
