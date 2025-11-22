@@ -244,15 +244,17 @@ local function performSpin()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 	task.wait(0.3)
 
-	local firstItem = spinList:FindFirstChild("SpinItem_1")
-	if not firstItem then
+	local winningItem = spinList:FindFirstChild("SpinItem_" .. winningIndex)
+	if not winningItem then
 		isSpinning = false
 		return
 	end
 
-	local itemWidth = firstItem.AbsoluteSize.X
+	task.wait(0.1)
+
+	local itemCenterX = winningItem.AbsolutePosition.X - spinList.AbsolutePosition.X + (winningItem.AbsoluteSize.X / 2)
 	local containerCenter = spinContainer.AbsoluteSize.X / 2
-	local targetScrollX = ((winningIndex - 1) * itemWidth) - containerCenter + (itemWidth / 2)
+	local targetScrollX = itemCenterX - containerCenter
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
