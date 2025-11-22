@@ -237,7 +237,6 @@ local function performSpin()
 		local modelToUse = i == winningIndex and wonSeat or models[math.random(1, #models)]
 		local display = createSpinDisplay(modelToUse)
 		display.LayoutOrder = i
-		display.Name = "SpinItem_" .. i
 		display.Parent = spinList
 
 		if i % 10 == 0 then
@@ -245,20 +244,19 @@ local function performSpin()
 		end
 	end
 
+	task.wait(0.5)
 	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.3)
 
+	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
 	local winningItem = spinList:FindFirstChild("SpinItem_" .. winningIndex)
+
 	if not winningItem then
 		isSpinning = false
 		return
 	end
 
-	task.wait(0.1)
-
-	local itemCenterX = winningItem.AbsolutePosition.X - spinList.AbsolutePosition.X + (winningItem.AbsoluteSize.X / 2)
-	local containerCenter = spinContainer.AbsoluteSize.X / 2
-	local targetScrollX = itemCenterX - containerCenter
+	local winningItemCenter = winningItem.AbsolutePosition.X + (winningItem.AbsoluteSize.X / 2)
+	local targetScroll = winningItemCenter - pickerCenter
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
@@ -266,8 +264,6 @@ local function performSpin()
 	rollSoundInstance:Play()
 
 	local startTime = os.clock()
-	local slowdownStart = SPIN_DURATION - SLOWDOWN_TIME
-	local normalSpeed = 0.9
 
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
@@ -275,7 +271,7 @@ local function performSpin()
 
 		if elapsed >= SPIN_DURATION then
 			connection:Disconnect()
-			spinList.CanvasPosition = Vector2.new(targetScrollX, 0)
+			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
 
 			if rollSoundInstance then
 				rollSoundInstance:Stop()
@@ -289,21 +285,29 @@ local function performSpin()
 			return
 		end
 
-		local eased
-		if elapsed < slowdownStart then
-			local normalProgress = elapsed / slowdownStart
-			eased = normalProgress * normalSpeed
+		local timeRemaining = SPIN_DURATION - elapsed
+		local progress = elapsed / SPIN_DURATION
+		local scrollProgress
+
+		if timeRemaining > SLOWDOWN_TIME then
+			scrollProgress = progress
 		else
-			local slowdownProgress = (elapsed - slowdownStart) / SLOWDOWN_TIME
-			local slowdownEased = 1 - math.pow(1 - slowdownProgress, 3)
-			eased = normalSpeed + (slowdownEased * (1 - normalSpeed))
+			local slowdownRatio = SLOWDOWN_TIME / SPIN_DURATION
+			local beforeSlowdown = 1 - slowdownRatio
+			local slowdownProgress = (progress - beforeSlowdown) / slowdownRatio
+			local slowdownEase = 1 - math.pow(1 - slowdownProgress, 4)
+			scrollProgress = beforeSlowdown + (slowdownEase * slowdownRatio)
 		end
 
-		spinList.CanvasPosition = Vector2.new(eased * targetScrollX, 0)
+		spinList.CanvasPosition = Vector2.new(scrollProgress * targetScroll, 0)
 
 		if rollSoundInstance then
-			local speed = (elapsed < slowdownStart) and 1.5 or (1.5 - ((elapsed - slowdownStart) / SLOWDOWN_TIME) * 1.1)
-			rollSoundInstance.PlaybackSpeed = math.max(0.4, speed)
+			if timeRemaining > SLOWDOWN_TIME then
+				rollSoundInstance.PlaybackSpeed = 1.8
+			else
+				local slowdownProgress = (SLOWDOWN_TIME - timeRemaining) / SLOWDOWN_TIME
+				rollSoundInstance.PlaybackSpeed = 1.8 - (slowdownProgress * 1.4)
+			end
 		end
 	end)
 end
