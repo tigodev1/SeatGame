@@ -67,14 +67,13 @@ end
 
 --// Button Animations
 local function setupButton(btn)
+	btn.Active = true
 	buttonSizes[btn] = btn.Size
 	local info = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 	btn.MouseEnter:Connect(function()
-		if btn.Active then
-			playSound(hoverSound)
-			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
-		end
+		playSound(hoverSound)
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
 	end)
 
 	btn.MouseLeave:Connect(function()
@@ -82,15 +81,11 @@ local function setupButton(btn)
 	end)
 
 	btn.MouseButton1Down:Connect(function()
-		if btn.Active then
-			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 0.95)}):Play()
-		end
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 0.95)}):Play()
 	end)
 
 	btn.MouseButton1Up:Connect(function()
-		if btn.Active then
-			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
-		end
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
 	end)
 end
 
