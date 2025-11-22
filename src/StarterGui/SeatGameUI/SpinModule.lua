@@ -1,248 +1,203 @@
---// Services
-local RunService = game:GetService("RunService")
+--// Simple Spin System
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
---// Module
-local SpinModule = {}
+local Spin = {}
+local busy = false
+local config = nil
 
---// Config
-local SPIN_DURATION = 4.5
-local TOTAL_ITEMS = 180
-local IDLE_SPEED = 15
-
---// State
-local spinning = false
-local initialized = false
-
---// References
-local ui = {}
-local game_data = {}
-
---// Connections
-local idleLoop = nil
-local soundLoop = nil
-local activeSounds = {}
-
---// Functions
-local function cleanup()
-	if idleLoop then
-		idleLoop:Disconnect()
-		idleLoop = nil
-	end
-
-	if soundLoop then
-		soundLoop:Disconnect()
-		soundLoop = nil
-	end
-
-	for _, sound in activeSounds do
-		if sound then
-			sound:Destroy()
-		end
-	end
-	activeSounds = {}
-end
-
-local function playSound(sound)
-	if not sound then return end
-	local s = sound:Clone()
-	s.Parent = SoundService
-	s:Play()
-	table.insert(activeSounds, s)
-	task.delay(2, function()
-		if s then s:Destroy() end
-	end)
-end
-
+-- Idle scroll
+local idleThread = nil
 local function startIdle()
-	if idleLoop or spinning then return end
-
-	idleLoop = RunService.Heartbeat:Connect(function(dt)
-		if spinning or not ui.list then return end
-
-		local max = ui.list.AbsoluteCanvasSize.X - ui.container.AbsoluteSize.X
-		if max > 0 then
-			local pos = ui.list.CanvasPosition.X + (IDLE_SPEED * dt)
-			if pos > max then pos = 0 end
-			ui.list.CanvasPosition = Vector2.new(pos, 0)
+	if idleThread then return end
+	idleThread = task.spawn(function()
+		while task.wait() do
+			if busy or not config then break end
+			local pos = config.list.CanvasPosition.X + 10
+			local max = config.list.AbsoluteCanvasSize.X - config.container.AbsoluteSize.X
+			if max > 0 and pos > max then pos = 0 end
+			config.list.CanvasPosition = Vector2.new(pos, 0)
 		end
 	end)
 end
 
 local function stopIdle()
-	if idleLoop then
-		idleLoop:Disconnect()
-		idleLoop = nil
+	if idleThread then
+		task.cancel(idleThread)
+		idleThread = nil
 	end
 end
 
-local function doSpin()
-	if spinning then return end
-	spinning = true
+-- Sound helper
+local function sound(s)
+	if not s then return end
+	local clone = s:Clone()
+	clone.Parent = SoundService
+	clone:Play()
+	game:GetService("Debris"):AddItem(clone, 3)
+end
 
+-- Main spin
+local function spin()
+	if busy then
+		print("Already spinning")
+		return
+	end
+
+	print("Starting spin")
+	busy = true
 	stopIdle()
-	cleanup()
 
-	-- Update button
-	ui.button.Active = false
-	ui.button.Text = "SPINNING..."
+	-- Button
+	config.button.Active = false
+	config.button.Text = "..."
 
-	-- Clear list
-	for _, child in ui.list:GetChildren() do
-		if child:IsA("GuiObject") then
-			child:Destroy()
-		end
+	-- Clear
+	for _, v in config.list:GetChildren() do
+		if v:IsA("GuiObject") then v:Destroy() end
 	end
 
-	-- Pick winner
-	local winner = game_data.rng:GetWeightedRandom()
-	local winIndex = math.floor(TOTAL_ITEMS * 0.75)
+	-- Winner
+	local winner = config.rng:GetWeightedRandom()
+	local winPos = 135 -- position in the list
 
-	-- Populate
-	for i = 1, TOTAL_ITEMS do
-		local seat = (i == winIndex) and winner or game_data.models[math.random(1, #game_data.models)]
-		local display = game_data.createDisplay(seat, game_data.rng)
-		display.LayoutOrder = i
-		display.Parent = ui.list
-
-		if i % 15 == 0 then
-			task.wait()
-		end
+	-- Fill list
+	for i = 1, 180 do
+		local model = i == winPos and winner or config.models[math.random(#config.models)]
+		local gui = config.makeDisplay(model, config.rng)
+		gui.LayoutOrder = i
+		gui.Parent = config.list
+		if i % 10 == 0 then task.wait() end
 	end
 
-	ui.list.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.1)
+	config.list.CanvasPosition = Vector2.new(0, 0)
+	task.wait()
 
-	-- Get measurements
-	local firstItem = ui.list:FindFirstChildOfClass("GuiObject")
-	if not firstItem then
-		spinning = false
-		ui.button.Active = true
-		ui.button.Text = "SPIN"
+	-- Measure
+	local first = config.list:FindFirstChildOfClass("GuiObject")
+	if not first then
+		busy = false
+		config.button.Active = true
+		config.button.Text = "SPIN"
 		startIdle()
 		return
 	end
 
-	local itemWidth = firstItem.AbsoluteSize.X
-	local target = (winIndex - 1) * itemWidth - (ui.container.AbsoluteSize.X / 2) + (itemWidth / 2)
+	local itemW = first.AbsoluteSize.X
+	local target = (winPos - 1) * itemW - config.container.AbsoluteSize.X / 2 + itemW / 2
 
-	-- Sound loop
-	local lastPos = 0
-	soundLoop = RunService.Heartbeat:Connect(function()
-		if not spinning then return end
-		local pos = ui.list.CanvasPosition.X
-		if pos - lastPos >= itemWidth then
-			playSound(game_data.rollSound)
-			lastPos = pos
+	-- Sound thread
+	local soundThread = task.spawn(function()
+		local last = 0
+		while busy do
+			local curr = config.list.CanvasPosition.X
+			if curr - last >= itemW then
+				sound(config.rollSound)
+				last = curr
+			end
+			task.wait()
 		end
 	end)
 
-	-- Tween
+	-- Animate
 	local tween = TweenService:Create(
-		ui.list,
-		TweenInfo.new(SPIN_DURATION, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+		config.list,
+		TweenInfo.new(4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
 		{CanvasPosition = Vector2.new(target, 0)}
 	)
 
-	tween.Completed:Connect(function()
-		-- Stop sounds
-		cleanup()
+	tween:Play()
+	tween.Completed:Wait()
 
-		-- Find winner
-		local pickerX = ui.picker.AbsolutePosition.X + (ui.picker.AbsoluteSize.X / 2)
-		local closest = nil
-		local closestDist = math.huge
+	-- Stop sound
+	task.cancel(soundThread)
 
-		for _, item in ui.list:GetChildren() do
-			if item:IsA("GuiObject") then
-				local itemX = item.AbsolutePosition.X + (item.AbsoluteSize.X / 2)
-				local dist = math.abs(itemX - pickerX)
-				if dist < closestDist then
-					closestDist = dist
-					closest = item
-				end
+	-- Find winner
+	local px = config.picker.AbsolutePosition.X + config.picker.AbsoluteSize.X / 2
+	local closest = nil
+	local closestD = math.huge
+
+	for _, item in config.list:GetChildren() do
+		if item:IsA("GuiObject") then
+			local ix = item.AbsolutePosition.X + item.AbsoluteSize.X / 2
+			local d = math.abs(ix - px)
+			if d < closestD then
+				closestD = d
+				closest = item
 			end
 		end
-
-		-- Highlight
-		if closest then
-			local stroke = Instance.new("UIStroke")
-			stroke.Color = Color3.fromRGB(255, 215, 0)
-			stroke.Thickness = 3
-			stroke.Parent = closest
-
-			task.delay(1, function()
-				if stroke then stroke:Destroy() end
-			end)
-		end
-
-		-- Get name
-		local wonName = nil
-		if closest then
-			local label = closest:FindFirstChild("Name")
-			if label then wonName = label.Text end
-		end
-
-		-- Play reward
-		playSound(game_data.rewardSound)
-
-		-- Save
-		if wonName then
-			task.spawn(function()
-				game_data.dataRemote:InvokeServer("UnlockChair", wonName)
-			end)
-		end
-
-		-- Reset
-		ui.button.Active = true
-		ui.button.Text = "SPIN"
-		spinning = false
-
-		startIdle()
-	end)
-
-	tween:Play()
-end
-
-function SpinModule:Init(config)
-	if initialized then return end
-
-	ui.list = config.spinList
-	ui.container = config.spinContainer
-	ui.picker = config.picker
-	ui.button = config.spinButton
-
-	game_data.models = config.models
-	game_data.rollSound = config.rollSound
-	game_data.rewardSound = config.rewardSound
-	game_data.rng = config.rngModule
-	game_data.createDisplay = config.createDisplayFunc
-	game_data.dataRemote = config.dataRemote
-
-	-- Initial preview
-	for i = 1, 40 do
-		local seat = game_data.models[math.random(1, #game_data.models)]
-		local display = game_data.createDisplay(seat, game_data.rng)
-		display.Parent = ui.list
 	end
 
-	ui.list.CanvasPosition = Vector2.new(0, 0)
+	-- Highlight
+	if closest then
+		local hi = Instance.new("UIStroke")
+		hi.Color = Color3.fromRGB(255, 200, 0)
+		hi.Thickness = 4
+		hi.Parent = closest
+		task.delay(1, function()
+			if hi then hi:Destroy() end
+		end)
+	end
 
-	-- Connect button
-	ui.button.MouseButton1Click:Connect(doSpin)
+	-- Get name
+	local name = nil
+	if closest then
+		local lbl = closest:FindFirstChild("Name")
+		if lbl then name = lbl.Text end
+	end
 
-	-- Start idle
+	-- Reward
+	sound(config.rewardSound)
+
+	-- Save
+	if name then
+		task.spawn(function()
+			config.data:InvokeServer("UnlockChair", name)
+		end)
+	end
+
+	-- Reset
+	task.wait(0.5)
+	config.button.Active = true
+	config.button.Text = "SPIN"
+	busy = false
+
+	print("Spin done")
+	startIdle()
+end
+
+-- Init
+function Spin:Init(cfg)
+	if config then return end
+
+	config = {
+		list = cfg.spinList,
+		container = cfg.spinContainer,
+		picker = cfg.picker,
+		button = cfg.spinButton,
+		models = cfg.models,
+		rollSound = cfg.rollSound,
+		rewardSound = cfg.rewardSound,
+		rng = cfg.rngModule,
+		makeDisplay = cfg.createDisplayFunc,
+		data = cfg.dataRemote
+	}
+
+	-- Preview
+	for i = 1, 30 do
+		local m = config.models[math.random(#config.models)]
+		local g = config.makeDisplay(m, config.rng)
+		g.Parent = config.list
+	end
+
+	-- Button
+	config.button.MouseButton1Click:Connect(spin)
+
+	-- Idle
 	startIdle()
 
-	initialized = true
+	print("Spin ready")
 end
 
-function SpinModule:Cleanup()
-	cleanup()
-	stopIdle()
-	spinning = false
-	initialized = false
-end
-
-return SpinModule
+return Spin
