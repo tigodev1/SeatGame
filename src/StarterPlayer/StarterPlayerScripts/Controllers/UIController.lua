@@ -377,6 +377,11 @@ function UIController:KnitStart()
 	-- Get DataService reference
 	DataService = Knit.GetService("DataService")
 
+	if not DataService then
+		warn("Failed to get DataService!")
+		return
+	end
+
 	-- Init Spin (pass DataService instead of RemoteFunction)
 	spin:Init({
 		spinList = spinList,
