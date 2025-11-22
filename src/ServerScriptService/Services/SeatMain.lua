@@ -54,7 +54,7 @@ local function createSeatAtPosition(seatPosition: Folder, player: Player): Seat?
 		return nil
 	end
 
-	seatClone.Parent = workspace
+	seatClone.Parent = seatFolder
 
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
 	local yOffset = modelSize.Y / 2
@@ -147,10 +147,10 @@ local function onPlayerRemoving(player: Player)
 
 			local position = SeatsPlacing:FindFirstChild(positionName)
 			if position then
-				for _, obj in ipairs(workspace:GetChildren()) do
-					if obj:IsA("Model") and obj:FindFirstChild("Seat") then
-						local seat = obj:FindFirstChildWhichIsA("Seat")
-						if seat and seat.Occupant and seat.Occupant.Parent == player.Character then
+				local seatFolder = position:FindFirstChild("Seat")
+				if seatFolder then
+					for _, obj in ipairs(seatFolder:GetChildren()) do
+						if obj:IsA("Model") then
 							obj:Destroy()
 							break
 						end
