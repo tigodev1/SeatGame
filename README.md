@@ -36,28 +36,59 @@ Join the game → instantly sitting
 
 ### Using the Scripts in Roblox Studio
 
-1. Open your Roblox Studio place
-2. Copy the Lua scripts from the `src/` folder into your game:
-   - `src/ServerScriptService/Services/SeatMain.lua` → ServerScriptService > Services (create a folder called "Services")
-3. Set up the workspace structure as shown in the Project Structure section below
-4. Copy the seat model data into ReplicatedStorage
+1. **Open your Roblox Studio place**
 
-## 📁 Project Structure
+2. **Set up the folder structure:**
+   - In **ServerScriptService**: Create a folder called "Services"
+   - In **ReplicatedStorage**: Create folders: SeatGame > SeatModels
+   - In **Workspace**: Create a folder called "SeatsPlacing"
 
+3. **Copy the script:**
+   - Copy `src/ServerScriptService/Services/SeatMain.lua` into ServerScriptService > Services
+
+4. **Create seat positions:**
+   - In Workspace > SeatsPlacing, create numbered folders (1, 2, 3, etc.)
+   - In each numbered folder, create a folder called "Seat"
+   - In each Seat folder, create an invisible Part called "AnchorPoint":
+     - Anchored = true
+     - CanCollide = false
+     - Transparency = 1
+     - Size = (1, 1, 1)
+   - Position these AnchorPoint parts where you want seats to appear
+
+5. **Create the Default seat:**
+   - In ReplicatedStorage > SeatGame > SeatModels, create a Model called "Default"
+   - Inside this model, create a Seat part (the actual seat players sit on)
+   - Add any additional parts for the chair design (backrest, legs, etc.)
+   - All parts should be Anchored = true
+
+## 📁 Required Structure
+
+**ServerScriptService:**
 ```
-src/
-├── ServerScriptService/
-│   └── Services/
-│       └── SeatMain.lua          # Main seating system
-├── ReplicatedStorage/
-│   └── SeatGame/
-│       └── SeatModels/
-│           └── Default.model.json # Default seat model
-└── Workspace/
-    └── SeatsPlacing/
-        ├── 1-8/                   # Numbered seat positions
-        │   └── Seat/
-        │       └── AnchorPoint    # Position marker
+Services/
+└── SeatMain (Script) ← Copy from repo
+```
+
+**ReplicatedStorage:**
+```
+SeatGame/
+└── SeatModels/
+    └── Default (Model) ← Create your seat model here
+        └── Seat (Seat part)
+        └── [Other parts for chair design]
+```
+
+**Workspace:**
+```
+SeatsPlacing/
+├── 1/
+│   └── Seat/
+│       └── AnchorPoint (Part - invisible)
+├── 2/
+│   └── Seat/
+│       └── AnchorPoint (Part - invisible)
+└── ... (create as many as you need)
 ```
 
 ## 🎯 Current Features (v0.1)

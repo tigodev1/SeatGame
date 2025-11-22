@@ -67,12 +67,19 @@ local function createSeatAtPosition(seatPosition, player)
 		return nil
 	end
 
-	-- Position the seat model at the anchor point
-	-- The seat should touch the baseplate, so align it properly
-	seatClone:PivotTo(anchorPoint.CFrame)
-
-	-- Parent to workspace
+	-- Parent to workspace first so we can get proper bounds
 	seatClone.Parent = workspace
+
+	-- Get the model's bounding box to calculate proper positioning
+	local modelCFrame, modelSize = seatClone:GetBoundingBox()
+
+	-- Calculate offset to place bottom of model on the baseplate
+	-- anchorPoint.Position.Y should be at baseplate level (usually 0.5 or similar)
+	local yOffset = modelSize.Y / 2
+
+	-- Position the seat model so its bottom sits on the anchor point
+	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
+	seatClone:PivotTo(targetCFrame)
 
 	-- Mark position as occupied
 	occupiedSeats[seatPosition.Name] = player.UserId
