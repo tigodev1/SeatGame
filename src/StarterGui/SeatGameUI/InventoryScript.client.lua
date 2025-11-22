@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local screenGui = script.Parent
 local canvas = screenGui:FindFirstChild("Canvas")
@@ -7,7 +8,7 @@ if not canvas then return end
 local buttonContainer = canvas:FindFirstChild("ButtonContainer")
 if not buttonContainer then return end
 
-local inventoryButton = buttonContainer:FindFirstChild("Inventory")
+local inventoryButton = buttonContainer:FindFirstChild("InventoryButton")
 if not inventoryButton then return end
 
 local inventoryFrame = canvas:FindFirstChild("Inventory")
@@ -41,10 +42,19 @@ local function setupChairInViewport(viewport, chairModel)
 	clone.Parent = viewport
 
 	local cframe, size = clone:GetBoundingBox()
-	local distance = size.Magnitude * 1.5
+	local distance = size.Magnitude * 0.8
 
-	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance/2, distance)) * CFrame.Angles(0, math.rad(45), 0)
+	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance/3, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
+
+	local angle = 0
+	RunService.RenderStepped:Connect(function(dt)
+		if clone and clone.Parent then
+			angle = angle + (dt * 50)
+			local rotatedCFrame = CFrame.new(cframe.Position) * CFrame.Angles(0, math.rad(angle), 0)
+			clone:PivotTo(rotatedCFrame)
+		end
+	end)
 end
 
 local function createChairDisplay(chairModel)
