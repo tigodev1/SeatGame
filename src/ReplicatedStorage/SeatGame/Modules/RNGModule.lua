@@ -6,15 +6,21 @@ local RNGModule = {}
 
 --// Config
 RNGModule.RarityWeights = {
-	["Common"] = 70,
-	["Rare"] = 25,
-	["Legendary"] = 5,
+	["Common"] = 50,
+	["Uncommon"] = 30,
+	["Rare"] = 12,
+	["Epic"] = 5,
+	["Legendary"] = 2.5,
+	["Mythical"] = 0.5,
 }
 
 RNGModule.RarityColors = {
-	["Common"] = Color3.fromRGB(255, 255, 255),
-	["Rare"] = Color3.fromRGB(85, 170, 255),
-	["Legendary"] = Color3.fromRGB(255, 170, 0),
+	["Common"] = Color3.fromRGB(180, 180, 180),      -- Gray
+	["Uncommon"] = Color3.fromRGB(85, 255, 85),      -- Green
+	["Rare"] = Color3.fromRGB(85, 170, 255),         -- Blue
+	["Epic"] = Color3.fromRGB(170, 85, 255),         -- Purple
+	["Legendary"] = Color3.fromRGB(255, 170, 0),     -- Gold
+	["Mythical"] = Color3.fromRGB(255, 50, 150),     -- Pink/Magenta
 }
 
 --// Functions
@@ -67,29 +73,47 @@ function RNGModule:GetSeatsByRarity(rarityName)
 end
 
 function RNGModule:GetWeightedRandom()
-	local totalWeight = 0
-	for _, weight in pairs(self.RarityWeights) do
-		totalWeight = totalWeight + weight
+	-- Build weighted pool with proper ordering
+	local rarityPool = {}
+	for rarityName, weight in pairs(self.RarityWeights) do
+		table.insert(rarityPool, {
+			name = rarityName,
+			weight = weight
+		})
 	end
 
+	-- Sort by weight (highest to lowest) for consistency
+	table.sort(rarityPool, function(a, b)
+		return a.weight > b.weight
+	end)
+
+	-- Calculate total weight
+	local totalWeight = 0
+	for _, rarity in ipairs(rarityPool) do
+		totalWeight = totalWeight + rarity.weight
+	end
+
+	-- Generate random number and select rarity
 	local random = Random.new()
 	local roll = random:NextNumber(0, totalWeight)
 
 	local currentWeight = 0
-	for rarityName, weight in pairs(self.RarityWeights) do
-		currentWeight = currentWeight + weight
+	for _, rarity in ipairs(rarityPool) do
+		currentWeight = currentWeight + rarity.weight
 		if roll <= currentWeight then
-			local seatsInRarity = self:GetSeatsByRarity(rarityName)
+			local seatsInRarity = self:GetSeatsByRarity(rarity.name)
 			if #seatsInRarity > 0 then
+				-- Randomly select a chair from this rarity
 				local randomIndex = random:NextInteger(1, #seatsInRarity)
 				return seatsInRarity[randomIndex]
 			end
 		end
 	end
 
+	-- Fallback to Common if something goes wrong
 	local commonSeats = self:GetSeatsByRarity("Common")
 	if #commonSeats > 0 then
-		return commonSeats[1]
+		return commonSeats[random:NextInteger(1, #commonSeats)]
 	end
 
 	return nil
@@ -101,8 +125,33 @@ function RNGModule:GetRarityChance(rarityName)
 	return weight
 end
 
+function RNGModule:GetRarityChancePercent(rarityName)
+	local weight = self.RarityWeights[rarityName]
+	if not weight then return 0 end
+
+	local totalWeight = 0
+	for _, w in pairs(self.RarityWeights) do
+		totalWeight = totalWeight + w
+	end
+
+	return (weight / totalWeight) * 100
+end
+
 function RNGModule:GetRarityColor(rarityName)
 	return self.RarityColors[rarityName] or Color3.fromRGB(255, 255, 255)
+end
+
+-- Print rarity chances on initialization
+local totalWeight = 0
+for _, weight in pairs(RNGModule.RarityWeights) do
+	totalWeight = totalWeight + weight
+end
+
+print("✓ RNGModule Initialized")
+print("  Rarity Chances:")
+for rarityName, weight in pairs(RNGModule.RarityWeights) do
+	local percentage = (weight / totalWeight) * 100
+	print(string.format("    %s: %.2f%%", rarityName, percentage))
 end
 
 return RNGModule
