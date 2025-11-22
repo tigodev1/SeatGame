@@ -21,11 +21,13 @@ local idleConnection = nil
 
 -- Constants
 local IDLE_SCROLL_SPEED = 20 -- pixels per second (slow and smooth)
-local SPIN_DURATION = 5 -- seconds
+local SPIN_DURATION = 4.5 -- seconds (fast start, slow stop)
 local TOTAL_ITEMS = 200 -- items in the spin list
 local WINNER_POSITION = 150 -- which slot the winner appears at
 local HIGHLIGHT_COLOR = Color3.fromRGB(255, 215, 0) -- gold
 local HIGHLIGHT_THICKNESS = 5
+local EASING_STYLE = Enum.EasingStyle.Exponential -- Very dramatic slow down
+local EASING_DIRECTION = Enum.EasingDirection.Out
 
 --[[
 	Sound Helper
@@ -141,7 +143,7 @@ end
 
 --[[
 	Calculate Target Position
-	Determines where to scroll to center the winner
+	Determines where to scroll to center the winner under the picker
 --]]
 local function calculateTargetPosition()
 	-- Get first item to measure width
@@ -152,16 +154,29 @@ local function calculateTargetPosition()
 	end
 
 	local itemWidth = firstItem.AbsoluteSize.X
-	local containerWidth = config.container.AbsoluteSize.X
 
-	-- Calculate position to center the winner under the picker
-	local targetX = (WINNER_POSITION - 1) * itemWidth - (containerWidth / 2) + (itemWidth / 2)
+	-- Get picker position relative to container
+	local pickerCenterX = config.picker.AbsolutePosition.X + (config.picker.AbsoluteSize.X / 2)
+	local containerStartX = config.container.AbsolutePosition.X
+	local pickerOffsetFromContainer = pickerCenterX - containerStartX
+
+	-- Calculate the X position of the winner item's center (in canvas coordinates)
+	local winnerItemCenterX = (WINNER_POSITION - 1) * itemWidth + (itemWidth / 2)
+
+	-- Calculate how much to scroll so the winner aligns with the picker
+	local targetScroll = winnerItemCenterX - pickerOffsetFromContainer
+
+	-- Clamp to valid scroll range
+	local maxScroll = config.list.AbsoluteCanvasSize.X - config.container.AbsoluteSize.X
+	targetScroll = math.clamp(targetScroll, 0, maxScroll)
 
 	print("[SpinModule] Item width:", itemWidth)
-	print("[SpinModule] Container width:", containerWidth)
-	print("[SpinModule] Target position:", targetX)
+	print("[SpinModule] Picker offset from container:", pickerOffsetFromContainer)
+	print("[SpinModule] Winner item center:", winnerItemCenterX)
+	print("[SpinModule] Target scroll:", targetScroll)
+	print("[SpinModule] Max scroll:", maxScroll)
 
-	return targetX
+	return targetScroll
 end
 
 --[[
@@ -313,13 +328,13 @@ local function executeSpin()
 	-- Start sound effects
 	local stopSounds = createSoundThread()
 
-	-- Create and play tween
+	-- Create and play tween with exponential easing for dramatic slow-down
 	local spinTween = TweenService:Create(
 		config.list,
 		TweenInfo.new(
 			SPIN_DURATION,
-			Enum.EasingStyle.Quart,
-			Enum.EasingDirection.Out
+			EASING_STYLE,
+			EASING_DIRECTION
 		),
 		{CanvasPosition = Vector2.new(targetPosition, 0)}
 	)
@@ -331,21 +346,20 @@ local function executeSpin()
 	-- Stop sounds
 	stopSounds()
 
-	print("[SpinModule] Spin animation complete")
+	print("[SpinModule] Spin animation complete - landed!")
 
-	-- Find and highlight winner
+	-- Find winner IMMEDIATELY
 	local winnerElement = findWinnerElement()
-	highlightWinner(winnerElement)
-
-	-- Get winner name
 	local winnerName = getItemName(winnerElement)
+
 	print("[SpinModule] Winner element:", winnerElement and winnerElement.Name or "nil")
 	print("[SpinModule] Winner name:", winnerName or "unknown")
 
-	-- Play reward sound
+	-- INSTANT feedback - highlight and sound together
+	highlightWinner(winnerElement)
 	playSound(config.rewardSound)
 
-	-- Save to player data
+	-- Save to player data (async, don't wait)
 	if winnerName then
 		task.spawn(function()
 			local success, result = pcall(function()
@@ -360,8 +374,8 @@ local function executeSpin()
 		end)
 	end
 
-	-- Reset state
-	task.wait(1)
+	-- Short pause before allowing next spin (reduced from 1 to 0.5)
+	task.wait(0.5)
 	config.button.Active = true
 	config.button.Text = "SPIN"
 	isSpinning = false
