@@ -127,17 +127,16 @@ local function populateSpinList()
 	local selectedSeats = {}
 
 	for i = 1, 10 do
-		local randomModel = models[math.random(1, #models)]
-		table.insert(selectedSeats, randomModel)
+		selectedSeats[i] = models[math.random(1, #models)]
 	end
 
-	for loop = 1, 6 do
-		for i, model in ipairs(selectedSeats) do
+	for loop = 1, 4 do
+		for _, model in ipairs(selectedSeats) do
 			local display = createSpinDisplay(model)
 			display.Parent = spinList
-			if i % 3 == 0 then
-				task.wait()
-			end
+		end
+		if loop < 4 then
+			task.wait()
 		end
 	end
 
@@ -173,12 +172,12 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(0.5)
+	task.wait(0.2)
 
-	local duration = 5
+	local duration = 4.5
 	local elapsed = 0
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
-	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.8)
+	local targetScroll = math.random(maxScroll * 0.55, maxScroll * 0.75)
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
@@ -197,17 +196,10 @@ local function performSpin()
 			return
 		end
 
-		local progress = elapsed / duration
-		local eased
-		if progress < 0.7 then
-			eased = progress / 0.7 * 0.85
-		else
-			local slowProgress = (progress - 0.7) / 0.3
-			eased = 0.85 + (1 - math.pow(1 - slowProgress, 5)) * 0.15
-		end
-		local currentScroll = eased * targetScroll
+		local t = elapsed / duration
+		local eased = t < 0.75 and (t / 0.75) * 0.9 or 0.9 + (1 - math.pow(1 - (t - 0.75) / 0.25, 6)) * 0.1
 
-		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
+		spinList.CanvasPosition = Vector2.new(eased * targetScroll, 0)
 	end)
 end
 
@@ -223,9 +215,10 @@ end
 
 local function toggleSpinning()
 	spinningFrame.Visible = not spinningFrame.Visible
+	inventoryFrame.Visible = false
+
 	if spinningFrame.Visible then
 		populateSpinList()
-		inventoryFrame.Visible = false
 	end
 end
 
