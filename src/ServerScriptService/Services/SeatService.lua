@@ -86,13 +86,18 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
-	-- Unanchor and setup all parts
+	-- Set network ownership to player to prevent physics jitter
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = false
 			part.CanCollide = false
 			part.Massless = true
 			part.CollisionGroup = "PlayerChair"
+
+			-- Set network ownership to prevent shaking
+			pcall(function()
+				part:SetNetworkOwner(player)
+			end)
 		end
 	end
 
@@ -100,33 +105,31 @@ local function attachChairToPlayer(player, chairName)
 	seatPart.Anchored = false
 	seatPart.CanCollide = false
 
-	-- Parent to character
+	-- Parent to character FIRST
 	chairClone.Parent = character
 
-	-- Position the chair below the player
-	local offset = CFrame.new(0, -2, 0)
-	seatPart.CFrame = humanoidRootPart.CFrame * offset
+	-- Calculate the offset from seat to player's position
+	-- Position seat part directly at player's HumanoidRootPart with slight downward offset
+	local yOffset = -2.5 -- Adjust this value to position chair correctly under player
 
-	-- Weld ALL chair parts to the main seat part to keep model together
+	-- First, weld all chair parts together BEFORE positioning
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") and part ~= seatPart then
-			local partWeld = Instance.new("Weld")
-			partWeld.Name = "ChairPartWeld"
+			local partWeld = Instance.new("WeldConstraint")
 			partWeld.Part0 = seatPart
 			partWeld.Part1 = part
-			partWeld.C0 = seatPart.CFrame:ToObjectSpace(part.CFrame)
-			partWeld.C1 = CFrame.new()
 			partWeld.Parent = part
 		end
 	end
 
-	-- Create main weld to attach chair to player
+	-- Now create the main weld from HumanoidRootPart to seat
 	local mainWeld = Instance.new("Weld")
 	mainWeld.Name = "ChairToPlayerWeld"
 	mainWeld.Part0 = humanoidRootPart
 	mainWeld.Part1 = seatPart
-	mainWeld.C0 = CFrame.new(0, 0, 0)
-	mainWeld.C1 = seatPart.CFrame:ToObjectSpace(humanoidRootPart.CFrame)
+	-- Set the offset so chair appears below player
+	mainWeld.C0 = CFrame.new(0, yOffset, 0)
+	mainWeld.C1 = CFrame.new(0, 0, 0)
 	mainWeld.Parent = seatPart
 
 	-- Store reference
