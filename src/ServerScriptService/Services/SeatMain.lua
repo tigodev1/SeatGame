@@ -34,20 +34,17 @@ end
 local function createSeatAtPosition(seatPosition, player)
 	local seatFolder = seatPosition:FindFirstChild("Seat")
 	if not seatFolder then
-		warn("No Seat folder found in position:", seatPosition.Name)
 		return nil
 	end
 
 	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
 	if not anchorPoint then
-		warn("No AnchorPoint found in:", seatPosition.Name)
 		return nil
 	end
 
 	-- Clone the default seat model
 	local defaultSeat = SeatModels:FindFirstChild("Default")
 	if not defaultSeat then
-		warn("No Default seat model found!")
 		return nil
 	end
 
@@ -62,7 +59,6 @@ local function createSeatAtPosition(seatPosition, player)
 	end
 
 	if not seatPart then
-		warn("No Seat or VehicleSeat found in Default model!")
 		seatClone:Destroy()
 		return nil
 	end
@@ -91,17 +87,38 @@ local function createSeatAtPosition(seatPosition, player)
 	return seatPart
 end
 
--- Function to disable player controls
-local function setupPlayerControls(player)
+-- Function to disable player controls and keep them seated
+local function setupPlayerControls(player, seatPart)
 	-- Wait for character
 	local character = player.Character or player.CharacterAdded:Wait()
 	local humanoid = character:WaitForChild("Humanoid")
 
-	-- Disable jumping
+	-- Disable all movement
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+	humanoid.WalkSpeed = 0
+	humanoid.JumpPower = 0
+	humanoid.JumpHeight = 0
+
+	-- Keep them seated continuously
+	local connection
+	connection = humanoid.StateChanged:Connect(function(oldState, newState)
+		-- If they try to get up, force them back to sitting
+		if newState ~= Enum.HumanoidStateType.Seated then
+			if seatPart and seatPart.Parent then
+				task.wait()
+				seatPart:Sit(humanoid)
+			else
+				-- Seat was destroyed, disconnect
+				connection:Disconnect()
+			end
+		end
+	end)
+
+	-- Store connection for cleanup
+	character:SetAttribute("SeatConnection", true)
 end
 
 -- Function to seat a player
@@ -119,19 +136,15 @@ local function seatPlayer(player)
 	-- Find available seat position
 	local seatPosition = findAvailableSeatPosition()
 	if not seatPosition then
-		warn("No available seat positions for player:", player.Name)
+		-- No seats available, player will just spawn normally
 		return
 	end
 
 	-- Create seat at position
 	local seatPart = createSeatAtPosition(seatPosition, player)
 	if not seatPart then
-		warn("Failed to create seat for player:", player.Name)
 		return
 	end
-
-	-- Disable player controls
-	setupPlayerControls(player)
 
 	-- Wait a brief moment for the seat to be fully set up
 	task.wait(0.1)
@@ -140,6 +153,9 @@ local function seatPlayer(player)
 	humanoidRootPart.CFrame = seatPart.CFrame + Vector3.new(0, 2, 0)
 	task.wait(0.1)
 	seatPart:Sit(humanoid)
+
+	-- Disable player controls after they're seated
+	setupPlayerControls(player, seatPart)
 
 	print("Player", player.Name, "seated at position", seatPosition.Name)
 end
@@ -186,13 +202,61 @@ local function onPlayerRemoving(player)
 	end
 end
 
--- Initialize
-Players.PlayerAdded:Connect(onPlayerAdded)
-Players.PlayerRemoving:Connect(onPlayerRemoving)
+-- Validate setup before starting
+local function validateSetup()
+	local issues = {}
 
--- Handle existing players (in case script runs after players join)
-for _, player in ipairs(Players:GetPlayers()) do
-	task.spawn(onPlayerAdded, player)
+	-- Check if SeatsPlacing has any children
+	if #SeatsPlacing:GetChildren() == 0 then
+		table.insert(issues, "⚠️ No seat positions found in Workspace > SeatsPlacing! Create numbered folders (1, 2, 3...)")
+	else
+		-- Check first position for proper structure
+		local firstPos = SeatsPlacing:GetChildren()[1]
+		if not firstPos:FindFirstChild("Seat") then
+			table.insert(issues, "⚠️ Seat positions need a 'Seat' folder inside each numbered folder")
+		elseif not firstPos.Seat:FindFirstChild("AnchorPoint") then
+			table.insert(issues, "⚠️ Each Seat folder needs an 'AnchorPoint' part")
+		end
+	end
+
+	-- Check for Default seat model
+	if not SeatModels:FindFirstChild("Default") then
+		table.insert(issues, "⚠️ No 'Default' seat model found in ReplicatedStorage > SeatGame > SeatModels!")
+	else
+		local defaultModel = SeatModels.Default
+		local hasSeat = defaultModel:FindFirstChildWhichIsA("Seat") or defaultModel:FindFirstChildWhichIsA("VehicleSeat")
+		if not hasSeat then
+			table.insert(issues, "⚠️ Default model needs a Seat or VehicleSeat part inside it!")
+		end
+	end
+
+	if #issues > 0 then
+		warn("========================================")
+		warn("🪑 SEAT GAME SETUP ISSUES DETECTED:")
+		for _, issue in ipairs(issues) do
+			warn(issue)
+		end
+		warn("========================================")
+		warn("Players will NOT be seated until these issues are fixed!")
+		return false
+	end
+
+	return true
 end
 
-print("SeatMain initialized!")
+-- Initialize
+local setupValid = validateSetup()
+
+if setupValid then
+	print("✅ SeatMain initialized successfully!")
+
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+	-- Handle existing players (in case script runs after players join)
+	for _, player in ipairs(Players:GetPlayers()) do
+		task.spawn(onPlayerAdded, player)
+	end
+else
+	warn("❌ SeatMain NOT initialized - fix setup issues above")
+end
