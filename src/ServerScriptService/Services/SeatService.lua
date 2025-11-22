@@ -42,6 +42,20 @@ local function removePlayerChair(player)
 		existingChair:Destroy()
 	end
 	playerChairs[player] = nil
+
+	-- Stop sitting animation
+	local character = player.Character
+	if character then
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			-- Stop any sitting animations
+			for _, track in humanoid:GetPlayingAnimationTracks() do
+				if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
+					track:Stop()
+				end
+			end
+		end
+	end
 end
 
 local function attachChairToPlayer(player, chairName)
@@ -64,7 +78,6 @@ local function attachChairToPlayer(player, chairName)
 	if not chairModel then return end
 
 	local chairClone = chairModel:Clone()
-	chairClone.Parent = character
 
 	-- Find the Seat part to use as anchor
 	local seatPart = chairClone:FindFirstChild("Seat")
@@ -73,28 +86,48 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
-	-- Make all parts non-collidable with the player
+	-- Unanchor and setup all parts
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") then
+			part.Anchored = false
 			part.CanCollide = false
 			part.Massless = true
-
-			-- Set collision group to not collide with player
 			part.CollisionGroup = "PlayerChair"
 		end
 	end
 
+	-- Make sure the main seat part is also unanchored
+	seatPart.Anchored = false
+	seatPart.CanCollide = false
+
+	-- Parent to character
+	chairClone.Parent = character
+
 	-- Position the chair below the player
-	local offset = CFrame.new(0, -2, 0) -- Adjust Y offset to position chair under player
+	local offset = CFrame.new(0, -2, 0)
+	seatPart.CFrame = humanoidRootPart.CFrame * offset
 
-	-- Create weld to attach chair to player
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = humanoidRootPart
-	weld.Part1 = seatPart
-	weld.Parent = seatPart
+	-- Weld ALL chair parts to the main seat part to keep model together
+	for _, part in chairClone:GetDescendants() do
+		if part:IsA("BasePart") and part ~= seatPart then
+			local partWeld = Instance.new("Weld")
+			partWeld.Name = "ChairPartWeld"
+			partWeld.Part0 = seatPart
+			partWeld.Part1 = part
+			partWeld.C0 = seatPart.CFrame:ToObjectSpace(part.CFrame)
+			partWeld.C1 = CFrame.new()
+			partWeld.Parent = part
+		end
+	end
 
-	-- Position the chair model
-	chairClone:PivotTo(humanoidRootPart.CFrame * offset)
+	-- Create main weld to attach chair to player
+	local mainWeld = Instance.new("Weld")
+	mainWeld.Name = "ChairToPlayerWeld"
+	mainWeld.Part0 = humanoidRootPart
+	mainWeld.Part1 = seatPart
+	mainWeld.C0 = CFrame.new(0, 0, 0)
+	mainWeld.C1 = seatPart.CFrame:ToObjectSpace(humanoidRootPart.CFrame)
+	mainWeld.Parent = seatPart
 
 	-- Store reference
 	playerChairs[player] = chairClone
@@ -102,14 +135,21 @@ local function attachChairToPlayer(player, chairName)
 	-- Animate the sitting pose
 	local humanoid = character:FindFirstChild("Humanoid")
 	if humanoid then
+		task.wait(0.1)
+
 		-- Load sitting animation
 		local sitAnim = Instance.new("Animation")
-		sitAnim.AnimationId = "rbxassetid://2506281703" -- Roblox default sit animation
+		sitAnim.AnimationId = "rbxassetid://2506281703"
 		local sitTrack = humanoid:LoadAnimation(sitAnim)
+		sitTrack.Priority = Enum.AnimationPriority.Action
+		sitTrack.Looped = true
 		sitTrack:Play()
 
-		-- Store animation track for cleanup
-		chairClone:SetAttribute("SitAnimationTrack", sitTrack)
+		-- Store animation track in the chair for cleanup
+		local animValue = Instance.new("ObjectValue")
+		animValue.Name = "SitAnimationTrack"
+		animValue.Value = sitTrack
+		animValue.Parent = chairClone
 	end
 end
 
@@ -120,20 +160,6 @@ end
 
 function SeatService:RemovePlayerChair(player)
 	removePlayerChair(player)
-
-	-- Stop sitting animation
-	local character = player.Character
-	if character then
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			-- Stop any sitting animations
-			for _, track in humanoid:GetPlayingAnimationTracks() do
-				if track.Animation.AnimationId == "rbxassetid://2506281703" then
-					track:Stop()
-				end
-			end
-		end
-	end
 end
 
 local function onPlayerAdded(player)
