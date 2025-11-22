@@ -58,8 +58,15 @@ local function createSeatAtPosition(seatPosition, player)
 
 	seatClone.Parent = seatFolder
 
-	-- Position model at anchor point with matching rotation
-	seatClone:PivotTo(anchorPoint.CFrame)
+	-- Check for optional rotation offset
+	local rotationOffset = seatModel:FindFirstChild("RotationOffset")
+	local yRotation = 0
+	if rotationOffset and rotationOffset:IsA("NumberValue") then
+		yRotation = math.rad(rotationOffset.Value)
+	end
+
+	-- Position model at anchor point with matching rotation plus offset
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.Angles(0, yRotation, 0))
 
 	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
@@ -67,7 +74,7 @@ local function createSeatAtPosition(seatPosition, player)
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
 	-- Apply vertical adjustment
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.Angles(0, yRotation, 0) * CFrame.new(0, yAdjustment, 0))
 
 	local important = seatPosition:FindFirstChild("Important")
 	local occupant = important:FindFirstChild("Occupant")
@@ -171,8 +178,15 @@ function SeatMain:SwapPlayerChair(player)
 
 	seatClone.Parent = seatFolder
 
-	-- Position model at anchor point with matching rotation
-	seatClone:PivotTo(anchorPoint.CFrame)
+	-- Check for optional rotation offset
+	local rotationOffset = seatModel:FindFirstChild("RotationOffset")
+	local yRotation = 0
+	if rotationOffset and rotationOffset:IsA("NumberValue") then
+		yRotation = math.rad(rotationOffset.Value)
+	end
+
+	-- Position model at anchor point with matching rotation plus offset
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.Angles(0, yRotation, 0))
 
 	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
@@ -180,7 +194,7 @@ function SeatMain:SwapPlayerChair(player)
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
 	-- Apply vertical adjustment
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.Angles(0, yRotation, 0) * CFrame.new(0, yAdjustment, 0))
 
 	-- Re-seat the player
 	task.wait(0.1)
