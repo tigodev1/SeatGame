@@ -70,7 +70,7 @@ local function fadeOutSounds(duration)
 	local startVolumes = {}
 
 	for i, sound in ipairs(soundClones) do
-		if sound and sound.Parent then
+		if sound and sound.Parent and sound.Volume then
 			startVolumes[i] = sound.Volume
 		end
 	end
@@ -81,7 +81,7 @@ local function fadeOutSounds(duration)
 		local alpha = math.min(elapsed / duration, 1)
 
 		for i, sound in ipairs(soundClones) do
-			if sound and sound.Parent then
+			if sound and sound.Parent and startVolumes[i] then
 				sound.Volume = startVolumes[i] * (1 - alpha)
 			end
 		end
