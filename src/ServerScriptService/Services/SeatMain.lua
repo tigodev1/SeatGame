@@ -10,9 +10,6 @@ local SeatGame = ReplicatedStorage:WaitForChild("SeatGame")
 local SeatModels = SeatGame:WaitForChild("SeatModels")
 local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 
---// Variables
-local occupiedSeats: {[string]: number} = {}
-
 --// Functions
 local function findAvailableSeatPosition(): Folder?
 	local seatPositions = SeatsPlacing:GetChildren()
@@ -22,8 +19,12 @@ local function findAvailableSeatPosition(): Folder?
 	end)
 
 	for _, positionFolder in ipairs(seatPositions) do
-		if not occupiedSeats[positionFolder.Name] then
-			return positionFolder
+		local important = positionFolder:FindFirstChild("Important")
+		if important then
+			local occupant = important:FindFirstChild("Occupant") :: StringValue
+			if occupant and occupant.Value == "" then
+				return positionFolder
+			end
 		end
 	end
 
@@ -66,7 +67,13 @@ local function createSeatAtPosition(seatPosition: Folder, player: Player): Seat?
 	)
 	seatClone:PivotTo(targetCFrame)
 
-	occupiedSeats[seatPosition.Name] = player.UserId
+	local important = seatPosition:FindFirstChild("Important")
+	if important then
+		local occupant = important:FindFirstChild("Occupant") :: StringValue
+		if occupant then
+			occupant.Value = player.Name
+		end
+	end
 
 	return seatPart
 end
@@ -141,12 +148,13 @@ local function onPlayerAdded(player: Player)
 end
 
 local function onPlayerRemoving(player: Player)
-	for positionName, userId in pairs(occupiedSeats) do
-		if userId == player.UserId then
-			occupiedSeats[positionName] = nil
+	for _, position in ipairs(SeatsPlacing:GetChildren()) do
+		local important = position:FindFirstChild("Important")
+		if important then
+			local occupant = important:FindFirstChild("Occupant") :: StringValue
+			if occupant and occupant.Value == player.Name then
+				occupant.Value = ""
 
-			local position = SeatsPlacing:FindFirstChild(positionName)
-			if position then
 				local seatFolder = position:FindFirstChild("Seat")
 				if seatFolder then
 					for _, obj in ipairs(seatFolder:GetChildren()) do
@@ -156,9 +164,9 @@ local function onPlayerRemoving(player: Player)
 						end
 					end
 				end
-			end
 
-			break
+				break
+			end
 		end
 	end
 end
