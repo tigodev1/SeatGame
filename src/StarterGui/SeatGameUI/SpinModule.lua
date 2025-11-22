@@ -252,6 +252,13 @@ local function executeSpin()
 	config.button.Active = false
 	config.button.Text = "SPINNING..."
 
+	-- Increment rolls stat
+	task.spawn(function()
+		pcall(function()
+			config.data:InvokeServer("IncrementRolls")
+		end)
+	end)
+
 	local winner = config.rng:GetWeightedRandom()
 	if not winner then
 		isSpinning = false

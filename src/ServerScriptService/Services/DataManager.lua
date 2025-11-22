@@ -25,6 +25,7 @@ local DEFAULT_DATA = {
 		Default = true,
 	},
 	EquippedChair = "Default",
+	Rolls = 0,
 }
 
 --// Variables
@@ -123,6 +124,40 @@ function DataManager:GetEquippedChair(player)
 	return "Default"
 end
 
+function DataManager:IncrementRolls(player)
+	local profile = self:GetProfile(player)
+	if not profile then return false end
+
+	local data = profile.Data
+	if not data then return false end
+
+	data.Rolls = (data.Rolls or 0) + 1
+
+	-- Update leaderstats display
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats then
+		local rollsStat = leaderstats:FindFirstChild("Rolls")
+		if rollsStat then
+			rollsStat.Value = data.Rolls
+		end
+	end
+
+	-- Save to datastore
+	pcall(function()
+		profile:Save()
+	end)
+
+	return true
+end
+
+function DataManager:GetRolls(player)
+	local data = self:GetData(player)
+	if data then
+		return data.Rolls or 0
+	end
+	return 0
+end
+
 local function onPlayerAdded(player)
 	local profile = profileStore:StartSessionAsync(`Player_{player.UserId}`, {
 		Cancel = function()
@@ -148,6 +183,16 @@ local function onPlayerAdded(player)
 		if profile.Data.OwnedChairs["Default"] == nil then
 			profile.Data.OwnedChairs["Default"] = true
 		end
+
+		-- Create leaderstats
+		local leaderstats = Instance.new("Folder")
+		leaderstats.Name = "leaderstats"
+		leaderstats.Parent = player
+
+		local rollsStat = Instance.new("IntValue")
+		rollsStat.Name = "Rolls"
+		rollsStat.Value = profile.Data.Rolls or 0
+		rollsStat.Parent = leaderstats
 
 		profiles[player] = profile
 
@@ -201,6 +246,8 @@ remoteFunction.OnServerInvoke = function(player, action, ...)
 	elseif action == "UnlockChair" then
 		local chairName = ...
 		return DataManager:AddChair(player, chairName)
+	elseif action == "IncrementRolls" then
+		return DataManager:IncrementRolls(player)
 	end
 	return nil
 end
