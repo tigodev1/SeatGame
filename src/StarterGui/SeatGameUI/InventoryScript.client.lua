@@ -5,15 +5,29 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Instances
 local screenGui = script.Parent :: ScreenGui
-local canvas = screenGui:WaitForChild("Canvas", 10) :: Frame
-local buttonContainer = canvas:WaitForChild("ButtonContainer", 10) :: Frame
-local inventoryButton = buttonContainer:WaitForChild("Inventory", 10) :: TextButton
-local inventoryFrame = canvas:WaitForChild("Inventory", 10) :: Frame
-local list = inventoryFrame:WaitForChild("List", 10) :: ScrollingFrame
-local chairTemplate = script:WaitForChild("ChairTemplate", 10) :: Frame
+local canvas = screenGui:FindFirstChild("Canvas") :: Frame?
+if not canvas then return end
+
+local buttonContainer = canvas:FindFirstChild("ButtonContainer") :: Frame?
+if not buttonContainer then return end
+
+local inventoryButton = buttonContainer:FindFirstChild("Inventory") :: TextButton?
+if not inventoryButton then return end
+
+local inventoryFrame = canvas:FindFirstChild("Inventory") :: Frame?
+if not inventoryFrame then return end
+
+local list = inventoryFrame:FindFirstChild("List") :: ScrollingFrame?
+if not list then return end
+
+local chairTemplate = script:FindFirstChild("ChairTemplate") :: Frame?
+if not chairTemplate then return end
 
 local seatGame = ReplicatedStorage:WaitForChild("SeatGame", 10)
+if not seatGame then return end
+
 local seatModels = seatGame:WaitForChild("SeatModels", 10)
+if not seatModels then return end
 
 --// Variables
 local isInventoryOpen = false
