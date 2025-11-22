@@ -46,6 +46,11 @@ local invOpen = false
 local buttonSizes = {}
 local equippedChair = "Default"
 
+-- Forward declarations
+local updateInventory
+local equipChair
+local unequipChair
+
 --// Utils
 local function playSound(sound)
 	local s = sound:Clone()
@@ -184,7 +189,7 @@ local function createSpin(model, rngMod)
 end
 
 --// Inventory
-local function updateInventory()
+updateInventory = function()
 	for _, child in invList:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
@@ -211,10 +216,10 @@ local function updateInventory()
 end
 
 --// Equip/Unequip
-local function equipChair(chairName)
+equipChair = function(chairName)
 	equippedChair = chairName
 
-	-- Save to server
+	-- Save to server and update the physical chair
 	task.spawn(function()
 		pcall(function()
 			data:InvokeServer("SetEquippedChair", chairName)
@@ -225,10 +230,10 @@ local function equipChair(chairName)
 	updateInventory()
 end
 
-local function unequipChair()
+unequipChair = function()
 	equippedChair = "Default"
 
-	-- Save to server
+	-- Save to server and update the physical chair
 	task.spawn(function()
 		pcall(function()
 			data:InvokeServer("SetEquippedChair", "Default")

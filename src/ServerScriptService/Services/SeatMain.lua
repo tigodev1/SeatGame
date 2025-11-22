@@ -12,7 +12,23 @@ local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 --// Modules
 local DataManager = require(ServerScriptService.Services.DataManager)
 
+--// Module
+local SeatMain = {}
+
 --// Functions
+local function findPlayerSeatPosition(player)
+	for _, position in ipairs(SeatsPlacing:GetChildren()) do
+		local important = position:FindFirstChild("Important")
+		if important then
+			local occupant = important:FindFirstChild("Occupant")
+			if occupant and occupant.Value == player.Name then
+				return position
+			end
+		end
+	end
+	return nil
+end
+
 local function findAvailableSeatPosition()
 	local seatPositions = SeatsPlacing:GetChildren()
 	table.sort(seatPositions, function(a, b)
@@ -118,6 +134,47 @@ local function onPlayerAdded(player)
 	end
 end
 
+function SeatMain:SwapPlayerChair(player)
+	local seatPosition = findPlayerSeatPosition(player)
+	if not seatPosition then return end
+
+	local character = player.Character
+	if not character then return end
+
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid then return end
+
+	local seatFolder = seatPosition:FindFirstChild("Seat")
+	if not seatFolder then return end
+
+	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
+	if not anchorPoint then return end
+
+	-- Remove old chair
+	for _, obj in ipairs(seatFolder:GetChildren()) do
+		if obj:IsA("Model") then
+			obj:Destroy()
+		end
+	end
+
+	-- Create new chair with equipped model
+	local equippedChairName = DataManager:GetEquippedChair(player)
+	local seatModel = SeatModels:FindFirstChild(equippedChairName) or SeatModels:FindFirstChild("Default")
+	local seatClone = seatModel:Clone()
+	local seatPart = seatClone:FindFirstChild("Seat")
+
+	seatClone.Parent = seatFolder
+
+	local modelCFrame, modelSize = seatClone:GetBoundingBox()
+	local yOffset = modelSize.Y / 2
+	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
+	seatClone:PivotTo(targetCFrame)
+
+	-- Re-seat the player
+	task.wait(0.1)
+	seatPart:Sit(humanoid)
+end
+
 local function onPlayerRemoving(player)
 	for _, position in ipairs(SeatsPlacing:GetChildren()) do
 		local important = position:FindFirstChild("Important")
@@ -142,6 +199,12 @@ local function onPlayerRemoving(player)
 	end
 end
 
+--// Listen for chair equip events
+local chairEquippedEvent = SeatGame:WaitForChild("ChairEquipped")
+chairEquippedEvent.Event:Connect(function(player, chairName)
+	SeatMain:SwapPlayerChair(player)
+end)
+
 --// Initialize
 Players.PlayerAdded:Connect(onPlayerAdded)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
@@ -155,3 +218,5 @@ print("✓ SeatMain Initialized", {
 	SeatModels = #SeatModels:GetChildren(),
 	AutoSeating = "Enabled"
 })
+
+return SeatMain

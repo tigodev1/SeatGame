@@ -11,6 +11,10 @@ local remoteFunction = Instance.new("RemoteFunction")
 remoteFunction.Name = "DataRemote"
 remoteFunction.Parent = SeatGame
 
+local chairEquippedEvent = Instance.new("BindableEvent")
+chairEquippedEvent.Name = "ChairEquipped"
+chairEquippedEvent.Parent = SeatGame
+
 --// Module
 local DataManager = {}
 
@@ -101,6 +105,9 @@ function DataManager:SetEquippedChair(player, chairName)
 		pcall(function()
 			profile:Save()
 		end)
+
+		-- Fire event to swap physical chair
+		chairEquippedEvent:Fire(player, chairName)
 
 		return true
 	end
