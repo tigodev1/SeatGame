@@ -46,7 +46,8 @@ local idleRollConnection = nil
 
 --// Config
 local SPIN_DURATION = 5
-local SLOWDOWN_TIME = 2.5
+local FAST_DURATION = 3.5
+local SLOW_DURATION = 1.5
 local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
@@ -343,16 +344,29 @@ local function performSpin()
 			return
 		end
 
-		local progress = elapsed / SPIN_DURATION
-		local scrollProgress = 1 - math.pow(1 - progress, 3)
+		local scrollProgress
+
+		if elapsed < FAST_DURATION then
+			local linearProgress = elapsed / FAST_DURATION
+			scrollProgress = linearProgress * 0.7
+
+			if rollSoundInstance then
+				rollSoundInstance.PlaybackSpeed = 2.0
+			end
+		else
+			local slowdownElapsed = elapsed - FAST_DURATION
+			local slowdownProgress = slowdownElapsed / SLOW_DURATION
+			local slowdownEase = 1 - math.pow(1 - slowdownProgress, 3)
+			scrollProgress = 0.7 + (slowdownEase * 0.3)
+
+			if rollSoundInstance then
+				local velocity = 3 * math.pow(1 - slowdownProgress, 2)
+				local speed = 0.2 + (velocity * 0.6)
+				rollSoundInstance.PlaybackSpeed = speed
+			end
+		end
 
 		spinList.CanvasPosition = Vector2.new(scrollProgress * targetScroll, 0)
-
-		if rollSoundInstance then
-			local velocity = 3 * math.pow(1 - progress, 2)
-			local speed = 0.2 + (velocity * 0.6)
-			rollSoundInstance.PlaybackSpeed = speed
-		end
 	end)
 end
 
