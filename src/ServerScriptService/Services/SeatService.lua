@@ -1,7 +1,7 @@
 --// Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
 --// Knit
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -9,7 +9,6 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 --// Instances
 local SeatGame = ReplicatedStorage:WaitForChild("SeatGame")
 local SeatModels = SeatGame:WaitForChild("SeatModels")
-local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 
 --// Create Service
 local SeatService = Knit.CreateService {
@@ -19,6 +18,9 @@ local SeatService = Knit.CreateService {
 
 --// References
 local DataService = nil -- Will be set in KnitStart
+
+--// State
+local playerChairs = {} -- [player] = chairModel
 
 --// Functions
 local function findChairModel(chairName)
@@ -34,211 +36,140 @@ local function findChairModel(chairName)
 	return nil
 end
 
-local function findPlayerSeatPosition(player)
-	for _, position in ipairs(SeatsPlacing:GetChildren()) do
-		local important = position:FindFirstChild("Important")
-		if important then
-			local occupant = important:FindFirstChild("Occupant")
-			if occupant and occupant.Value == player.Name then
-				return position
-			end
-		end
+local function removePlayerChair(player)
+	local existingChair = playerChairs[player]
+	if existingChair and existingChair.Parent then
+		existingChair:Destroy()
 	end
-	return nil
+	playerChairs[player] = nil
 end
 
-local function findAvailableSeatPosition()
-	local seatPositions = SeatsPlacing:GetChildren()
-	table.sort(seatPositions, function(a, b)
-		return tonumber(a.Name) < tonumber(b.Name)
-	end)
-
-	for _, positionFolder in ipairs(seatPositions) do
-		local important = positionFolder:FindFirstChild("Important")
-		if important then
-			local occupant = important:FindFirstChild("Occupant")
-			if occupant and occupant.Value == "" then
-				return positionFolder
-			end
-		end
-	end
-
-	return nil
-end
-
-local function createSeatAtPosition(seatPosition, player)
-	local seatFolder = seatPosition:FindFirstChild("Seat")
-	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
-	local equippedChairName = DataService:GetEquippedChair(player)
-	local seatModel = findChairModel(equippedChairName) or findChairModel("Default")
-	local seatClone = seatModel:Clone()
-	local seatPart = seatClone:FindFirstChild("Seat")
-
-	seatClone.Parent = seatFolder
-
-	-- Use the Seat part as the pivot reference for proper alignment
-	seatClone.WorldPivot = seatPart.CFrame
-
-	-- Position model so Seat part aligns with anchor point
-	seatClone:PivotTo(anchorPoint.CFrame)
-
-	-- Get bounding box to find the actual lowest point
-	local modelCFrame, modelSize = seatClone:GetBoundingBox()
-	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
-	local yAdjustment = anchorPoint.Position.Y - lowestY
-
-	-- Reapply with vertical adjustment
-	seatClone.WorldPivot = seatPart.CFrame
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
-
-	local important = seatPosition:FindFirstChild("Important")
-	local occupant = important:FindFirstChild("Occupant")
-	occupant.Value = player.Name
-
-	return seatPart
-end
-
-local function setupPlayerControls(player, seatPart)
-	local character = player.Character or player.CharacterAdded:Wait()
-	local humanoid = character:WaitForChild("Humanoid")
-
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying, false)
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-	humanoid.WalkSpeed = 0
-	humanoid.JumpPower = 0
-	humanoid.JumpHeight = 0
-
-	humanoid.Died:Connect(function()
-		humanoid.Health = humanoid.MaxHealth
-	end)
-
-	local connection
-	connection = humanoid.StateChanged:Connect(function(oldState, newState)
-		if newState ~= Enum.HumanoidStateType.Seated then
-			if seatPart and seatPart.Parent then
-				task.wait()
-				seatPart:Sit(humanoid)
-			else
-				connection:Disconnect()
-			end
-		end
-	end)
-end
-
-local function seatPlayer(player)
+local function attachChairToPlayer(player, chairName)
 	local character = player.Character
-	if not character then
-		player.CharacterAdded:Wait()
-		character = player.Character
+	if not character then return end
+
+	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+	if not humanoidRootPart then return end
+
+	-- Remove any existing chair
+	removePlayerChair(player)
+
+	-- If chairName is nil or "None", just remove the chair (normal walking)
+	if not chairName or chairName == "None" then
+		return
 	end
 
-	local humanoid = character:WaitForChild("Humanoid")
-	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-	local seatPosition = findAvailableSeatPosition()
+	-- Find and clone the chair model
+	local chairModel = findChairModel(chairName)
+	if not chairModel then return end
 
-	if not seatPosition then return end
+	local chairClone = chairModel:Clone()
+	chairClone.Parent = character
 
-	local seatPart = createSeatAtPosition(seatPosition, player)
+	-- Find the Seat part to use as anchor
+	local seatPart = chairClone:FindFirstChild("Seat")
+	if not seatPart then
+		chairClone:Destroy()
+		return
+	end
 
-	task.wait(0.1)
-	humanoidRootPart.CFrame = seatPart.CFrame + Vector3.new(0, 2, 0)
-	task.wait(0.1)
-	seatPart:Sit(humanoid)
+	-- Make all parts non-collidable with the player
+	for _, part in chairClone:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+			part.Massless = true
 
-	setupPlayerControls(player, seatPart)
+			-- Set collision group to not collide with player
+			part.CollisionGroup = "PlayerChair"
+		end
+	end
+
+	-- Position the chair below the player
+	local offset = CFrame.new(0, -2, 0) -- Adjust Y offset to position chair under player
+
+	-- Create weld to attach chair to player
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = humanoidRootPart
+	weld.Part1 = seatPart
+	weld.Parent = seatPart
+
+	-- Position the chair model
+	chairClone:PivotTo(humanoidRootPart.CFrame * offset)
+
+	-- Store reference
+	playerChairs[player] = chairClone
+
+	-- Animate the sitting pose
+	local humanoid = character:FindFirstChild("Humanoid")
+	if humanoid then
+		-- Load sitting animation
+		local sitAnim = Instance.new("Animation")
+		sitAnim.AnimationId = "rbxassetid://2506281703" -- Roblox default sit animation
+		local sitTrack = humanoid:LoadAnimation(sitAnim)
+		sitTrack:Play()
+
+		-- Store animation track for cleanup
+		chairClone:SetAttribute("SitAnimationTrack", sitTrack)
+	end
+end
+
+function SeatService:SwapPlayerChair(player)
+	local equippedChairName = DataService:GetEquippedChair(player)
+	attachChairToPlayer(player, equippedChairName)
+end
+
+function SeatService:RemovePlayerChair(player)
+	removePlayerChair(player)
+
+	-- Stop sitting animation
+	local character = player.Character
+	if character then
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			-- Stop any sitting animations
+			for _, track in humanoid:GetPlayingAnimationTracks() do
+				if track.Animation.AnimationId == "rbxassetid://2506281703" then
+					track:Stop()
+				end
+			end
+		end
+	end
 end
 
 local function onPlayerAdded(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
-		seatPlayer(player)
+
+		-- Get equipped chair and attach it
+		local equippedChairName = DataService:GetEquippedChair(player)
+		if equippedChairName and equippedChairName ~= "None" then
+			attachChairToPlayer(player, equippedChairName)
+		end
 	end)
 
 	if player.Character then
 		task.wait(0.5)
-		seatPlayer(player)
-	end
-end
-
-function SeatService:SwapPlayerChair(player)
-	local seatPosition = findPlayerSeatPosition(player)
-	if not seatPosition then return end
-
-	local character = player.Character
-	if not character then return end
-
-	local humanoid = character:FindFirstChild("Humanoid")
-	if not humanoid then return end
-
-	local seatFolder = seatPosition:FindFirstChild("Seat")
-	if not seatFolder then return end
-
-	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
-	if not anchorPoint then return end
-
-	-- Remove old chair
-	for _, obj in ipairs(seatFolder:GetChildren()) do
-		if obj:IsA("Model") then
-			obj:Destroy()
+		local equippedChairName = DataService:GetEquippedChair(player)
+		if equippedChairName and equippedChairName ~= "None" then
+			attachChairToPlayer(player, equippedChairName)
 		end
 	end
-
-	-- Create new chair with equipped model
-	local equippedChairName = DataService:GetEquippedChair(player)
-	local seatModel = findChairModel(equippedChairName) or findChairModel("Default")
-	local seatClone = seatModel:Clone()
-	local seatPart = seatClone:FindFirstChild("Seat")
-
-	seatClone.Parent = seatFolder
-
-	-- Use the Seat part as the pivot reference for proper alignment
-	seatClone.WorldPivot = seatPart.CFrame
-
-	-- Position model so Seat part aligns with anchor point
-	seatClone:PivotTo(anchorPoint.CFrame)
-
-	-- Get bounding box to find the actual lowest point
-	local modelCFrame, modelSize = seatClone:GetBoundingBox()
-	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
-	local yAdjustment = anchorPoint.Position.Y - lowestY
-
-	-- Reapply with vertical adjustment
-	seatClone.WorldPivot = seatPart.CFrame
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
-
-	-- Re-seat the player
-	task.wait(0.1)
-	seatPart:Sit(humanoid)
 end
 
 local function onPlayerRemoving(player)
-	for _, position in ipairs(SeatsPlacing:GetChildren()) do
-		local important = position:FindFirstChild("Important")
-		if important then
-			local occupant = important:FindFirstChild("Occupant")
-			if occupant and occupant.Value == player.Name then
-				occupant.Value = ""
-
-				local seatFolder = position:FindFirstChild("Seat")
-				if seatFolder then
-					for _, obj in ipairs(seatFolder:GetChildren()) do
-						if obj:IsA("Model") then
-							obj:Destroy()
-							break
-						end
-					end
-				end
-
-				break
-			end
-		end
-	end
+	removePlayerChair(player)
+	playerChairs[player] = nil
 end
 
 --// Knit Lifecycle
 function SeatService:KnitInit()
+	-- Setup collision group for chairs
+	local PhysicsService = game:GetService("PhysicsService")
+	pcall(function()
+		PhysicsService:CreateCollisionGroup("PlayerChair")
+		PhysicsService:CollisionGroupSetCollidable("PlayerChair", "PlayerChair", false)
+	end)
+
 	-- Initialize player lifecycle
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
@@ -260,9 +191,8 @@ function SeatService:KnitInit()
 	end
 
 	print("✓ SeatService Initialized", {
-		SeatPositions = #SeatsPlacing:GetChildren(),
 		SeatModels = totalModels,
-		AutoSeating = "Enabled"
+		Movement = "Free movement with chairs attached"
 	})
 end
 

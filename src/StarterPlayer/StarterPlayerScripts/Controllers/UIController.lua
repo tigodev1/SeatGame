@@ -329,12 +329,12 @@ equipChair = function(chairName)
 end
 
 unequipChair = function()
-	equippedChair = "Default"
+	equippedChair = "None"
 
-	-- Save to server and update the physical chair (using Knit)
+	-- Save to server and remove the physical chair (using Knit)
 	task.spawn(function()
 		pcall(function()
-			DataService:SetEquippedChair("Default")
+			DataService:SetEquippedChair("None")
 		end)
 	end)
 

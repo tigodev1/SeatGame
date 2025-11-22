@@ -101,7 +101,8 @@ function DataService:SetEquippedChair(player, chairName)
 	local data = profile.Data
 	if not data then return false end
 
-	if data.OwnedChairs[chairName] then
+	-- Allow "None" to unequip, or any owned chair
+	if chairName == "None" or data.OwnedChairs[chairName] then
 		data.EquippedChair = chairName
 
 		-- Save to datastore
