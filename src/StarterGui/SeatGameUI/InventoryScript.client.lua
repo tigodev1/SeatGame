@@ -263,8 +263,9 @@ local function performSpin()
 
 	local itemWidth = targetChild.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetPosition = (winningPosition - 1) * itemWidth
-	local finalScroll = targetPosition - (containerWidth / 2) + (itemWidth / 2)
+	local pickerCenterX = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2) - spinList.AbsolutePosition.X
+	local targetCenterX = (winningPosition - 0.5) * itemWidth
+	local finalScroll = targetCenterX - pickerCenterX
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
@@ -307,7 +308,7 @@ local function performSpin()
 		spinList.CanvasPosition = Vector2.new(eased * finalScroll, 0)
 
 		if rollSoundInstance then
-			local speed = 1 - eased
+			local speed = 1 - progress
 			rollSoundInstance.PlaybackSpeed = 0.5 + (speed * 1.5)
 		end
 	end)
