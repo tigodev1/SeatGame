@@ -39,16 +39,18 @@ local rngModule = require(seatGame.Modules.RNGModule)
 local spinModule = require(script:WaitForChild("SpinModule"))
 local dataRemote = seatGame:WaitForChild("DataRemote")
 
+--// Config
+local IDLE_SCROLL_SPEED = 15
+local FRAME_TWEEN_INFO = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local BUTTON_TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 --// Variables
 local isInventoryOpen = false
 local isSpinning = false
 local buttonSizes = {}
 local idleRollConnection = nil
 
---// Config
-local IDLE_SCROLL_SPEED = 15
-
---// Functions
+--// Utility Functions
 local function playSound(sound)
 	local clone = sound:Clone()
 	clone.Parent = SoundService
@@ -67,18 +69,39 @@ local function scaleUDim2(udim2, scale)
 	)
 end
 
+local function animateFrameIn(frame)
+	frame.Visible = true
+	frame.GroupTransparency = 1
+	TweenService:Create(frame, FRAME_TWEEN_INFO, {
+		GroupTransparency = 0
+	}):Play()
+end
+
+local function animateFrameOut(frame, callback)
+	local tween = TweenService:Create(frame, FRAME_TWEEN_INFO, {
+		GroupTransparency = 1
+	})
+	tween.Completed:Connect(function()
+		frame.Visible = false
+		frame.GroupTransparency = 0
+		if callback then callback() end
+	end)
+	tween:Play()
+end
+
+--// Button Animation Setup
 local function setupButtonAnimation(button)
 	buttonSizes[button] = button.Size
 
 	button.MouseEnter:Connect(function()
 		playSound(hoverSound)
-		TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TweenService:Create(button, BUTTON_TWEEN_INFO, {
 			Size = scaleUDim2(buttonSizes[button], 1.05)
 		}):Play()
 	end)
 
 	button.MouseLeave:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		TweenService:Create(button, BUTTON_TWEEN_INFO, {
 			Size = buttonSizes[button]
 		}):Play()
 	end)
@@ -96,6 +119,7 @@ local function setupButtonAnimation(button)
 	end)
 end
 
+--// Viewport Functions
 local function createViewportCamera(viewport)
 	local camera = Instance.new("Camera")
 	camera.Parent = viewport
@@ -110,9 +134,7 @@ local function setupChairInViewport(viewport, chairModel, rotating, isOwned)
 
 	if isOwned == false then
 		for _, descendant in clone:GetDescendants() do
-			if descendant:IsA("BasePart") then
-				descendant.Color = Color3.fromRGB(20, 20, 20)
-			elseif descendant:IsA("MeshPart") then
+			if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
 				descendant.Color = Color3.fromRGB(20, 20, 20)
 			end
 		end
@@ -136,6 +158,7 @@ local function setupChairInViewport(viewport, chairModel, rotating, isOwned)
 	end
 end
 
+--// Display Creation
 local function createChairDisplay(chairModel, isOwned)
 	local template = chairTemplate:Clone()
 	template.Visible = true
@@ -178,6 +201,7 @@ local function createSpinDisplay(chairModel, rngMod)
 	return template
 end
 
+--// Inventory Functions
 local function populateInventory()
 	for _, child in list:GetChildren() do
 		if child:IsA("GuiObject") then
@@ -195,6 +219,7 @@ local function populateInventory()
 	end
 end
 
+--// Spin Functions
 local function populateSpinList()
 	for _, child in spinList:GetChildren() do
 		if child:IsA("GuiObject") then
@@ -252,6 +277,9 @@ local function performSpin()
 	stopIdleRoll()
 	playSound(clickSound)
 
+	spinActionButton.Active = false
+	spinActionButton.BackgroundTransparency = 0.5
+
 	local models = seatModels:GetChildren()
 
 	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
@@ -266,41 +294,54 @@ local function performSpin()
 
 		task.wait(1.5)
 		isSpinning = false
+		spinActionButton.Active = true
+		spinActionButton.BackgroundTransparency = 0
 		startIdleRoll()
 	end)
 end
 
+--// UI Control Functions
 local function closeInventory()
 	isInventoryOpen = false
-	inventoryFrame.Visible = false
+	animateFrameOut(inventoryFrame)
 end
 
 local function closeSpinning()
-	spinningFrame.Visible = false
-	stopIdleRoll()
+	animateFrameOut(spinningFrame, function()
+		stopIdleRoll()
+	end)
 end
 
 local function toggleInventory()
 	playSound(clickSound)
 	isInventoryOpen = not isInventoryOpen
-	inventoryFrame.Visible = isInventoryOpen
 
 	if isInventoryOpen then
+		animateFrameIn(inventoryFrame)
 		populateInventory()
-		spinningFrame.Visible = false
+		if spinningFrame.Visible then
+			animateFrameOut(spinningFrame)
+		end
+	else
+		animateFrameOut(inventoryFrame)
 	end
 end
 
 local function toggleSpinning()
 	playSound(clickSound)
-	spinningFrame.Visible = not spinningFrame.Visible
-	inventoryFrame.Visible = false
+	local wasVisible = spinningFrame.Visible
 
-	if spinningFrame.Visible then
+	if not wasVisible then
+		animateFrameIn(spinningFrame)
 		populateSpinList()
 		startIdleRoll()
+		if inventoryFrame.Visible then
+			animateFrameOut(inventoryFrame)
+		end
 	else
-		stopIdleRoll()
+		animateFrameOut(spinningFrame, function()
+			stopIdleRoll()
+		end)
 	end
 end
 
