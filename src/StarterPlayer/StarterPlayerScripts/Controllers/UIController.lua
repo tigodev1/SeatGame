@@ -222,13 +222,21 @@ updateInventory = function()
 	end
 
 	-- Get equipped chair from server (using Knit)
-	local equippedResult = DataService:GetEquippedChair():await()
-	if equippedResult then
+	local success, equippedResult = pcall(function()
+		return DataService:GetEquippedChair():expect()
+	end)
+	if success and equippedResult then
 		equippedChair = equippedResult
 	end
 
 	-- Get owned chairs list
-	local owned = DataService:GetOwnedChairs():await() or {"Default"}
+	local owned = {"Default"}
+	local ownedSuccess, ownedResult = pcall(function()
+		return DataService:GetOwnedChairs():expect()
+	end)
+	if ownedSuccess and type(ownedResult) == "table" then
+		owned = ownedResult
+	end
 
 	-- Sort chairs: equipped first, then by name
 	local chairList = {}
