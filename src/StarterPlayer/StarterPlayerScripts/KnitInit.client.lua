@@ -5,16 +5,12 @@
 
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 --// Knit
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
---// Add Controllers manually
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local seatGameUI = playerGui:WaitForChild("SeatGameUI")
-local UIController = require(seatGameUI:WaitForChild("UIController"))
+--// Add Controllers
+local UIController = require(script.Parent.Controllers.UIController)
 
 --// Start Knit
 Knit.Start():andThen(function()

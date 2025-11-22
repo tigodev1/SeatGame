@@ -335,10 +335,9 @@ function UIController:KnitInit()
 	spinAction = spinFrame:WaitForChild("Spin")
 	invList = invFrame:WaitForChild("List")
 
-	-- Get templates from the original script location
-	local scriptParent = playerGui.SeatGameUI:WaitForChild("InventoryScript")
-	chairTemplate = scriptParent:WaitForChild("ChairTemplate")
-	spinTemplate = scriptParent:WaitForChild("SpinTemplate")
+	-- Get templates from SeatGameUI
+	chairTemplate = gui:WaitForChild("ChairTemplate")
+	spinTemplate = gui:WaitForChild("SpinTemplate")
 
 	-- Get game elements
 	game = ReplicatedStorage:WaitForChild("SeatGame")
@@ -349,7 +348,7 @@ function UIController:KnitInit()
 	rollSound = sounds:WaitForChild("Roll")
 	rewardSound = sounds:WaitForChild("Reward")
 	rng = require(game.Modules.RNGModule)
-	spin = require(scriptParent.SpinModule)
+	spin = require(game.Modules.SpinModule)
 
 	-- Setup UI
 	invFrame.Visible = false
