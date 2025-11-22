@@ -1,7 +1,7 @@
 --// Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 --// Knit
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -42,20 +42,6 @@ local function removePlayerChair(player)
 		existingChair:Destroy()
 	end
 	playerChairs[player] = nil
-
-	-- Stop sitting animation
-	local character = player.Character
-	if character then
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			-- Stop any sitting animations
-			for _, track in humanoid:GetPlayingAnimationTracks() do
-				if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
-					track:Stop()
-				end
-			end
-		end
-	end
 end
 
 local function attachChairToPlayer(player, chairName)
@@ -63,7 +49,8 @@ local function attachChairToPlayer(player, chairName)
 	if not character then return end
 
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-	if not humanoidRootPart then return end
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoidRootPart or not humanoid then return end
 
 	-- Remove any existing chair
 	removePlayerChair(player)
@@ -79,14 +66,14 @@ local function attachChairToPlayer(player, chairName)
 
 	local chairClone = chairModel:Clone()
 
-	-- Find the Seat part to use as anchor
+	-- Find the Seat part
 	local seatPart = chairClone:FindFirstChild("Seat")
 	if not seatPart then
 		chairClone:Destroy()
 		return
 	end
 
-	-- Set network ownership to player to prevent physics jitter
+	-- Setup all parts in the chair
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = false
@@ -101,18 +88,31 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Make sure the main seat part is also unanchored
+	-- Unanchor the seat part
 	seatPart.Anchored = false
 	seatPart.CanCollide = false
 
-	-- Parent to character FIRST
-	chairClone.Parent = character
+	-- Parent chair to workspace
+	chairClone.Parent = Workspace
 
-	-- Calculate the offset from seat to player's position
-	-- Position seat part directly at player's HumanoidRootPart with slight downward offset
-	local yOffset = -2.5 -- Adjust this value to position chair correctly under player
+	-- Position chair on the ground near the player
+	local playerPosition = humanoidRootPart.Position
+	local rayOrigin = playerPosition + Vector3.new(0, 10, 0)
+	local rayDirection = Vector3.new(0, -50, 0)
 
-	-- First, weld all chair parts together BEFORE positioning
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.FilterDescendantsInstances = {character, chairClone}
+
+	local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+
+	local groundY = raycastResult and raycastResult.Position.Y or playerPosition.Y
+
+	-- Position the chair on the ground
+	local chairPosition = Vector3.new(playerPosition.X, groundY, playerPosition.Z)
+	seatPart.CFrame = CFrame.new(chairPosition)
+
+	-- Weld all chair parts to the seat part
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") and part ~= seatPart then
 			local partWeld = Instance.new("WeldConstraint")
@@ -122,25 +122,29 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Now create the main weld from HumanoidRootPart to seat
-	local mainWeld = Instance.new("Weld")
-	mainWeld.Name = "ChairToPlayerWeld"
-	mainWeld.Part0 = humanoidRootPart
-	mainWeld.Part1 = seatPart
-	-- Set the offset so chair appears below player
-	mainWeld.C0 = CFrame.new(0, yOffset, 0)
-	mainWeld.C1 = CFrame.new(0, 0, 0)
-	mainWeld.Parent = seatPart
+	-- Anchor the seat so it stays on the ground
+	seatPart.Anchored = true
+
+	-- Teleport player to the chair
+	local sitPosition = seatPart.CFrame * CFrame.new(0, 2, 0)
+	humanoidRootPart.CFrame = sitPosition
+
+	-- Weld player to the chair
+	local playerWeld = Instance.new("Weld")
+	playerWeld.Name = "PlayerToChairWeld"
+	playerWeld.Part0 = seatPart
+	playerWeld.Part1 = humanoidRootPart
+	playerWeld.C0 = CFrame.new(0, 2, 0)
+	playerWeld.C1 = CFrame.new(0, 0, 0)
+	playerWeld.Parent = humanoidRootPart
 
 	-- Store reference
 	playerChairs[player] = chairClone
 
-	-- Animate the sitting pose
-	local humanoid = character:FindFirstChild("Humanoid")
-	if humanoid then
+	-- Play sitting animation
+	task.spawn(function()
 		task.wait(0.1)
 
-		-- Load sitting animation
 		local sitAnim = Instance.new("Animation")
 		sitAnim.AnimationId = "rbxassetid://2506281703"
 		local sitTrack = humanoid:LoadAnimation(sitAnim)
@@ -148,12 +152,12 @@ local function attachChairToPlayer(player, chairName)
 		sitTrack.Looped = true
 		sitTrack:Play()
 
-		-- Store animation track in the chair for cleanup
+		-- Store animation track
 		local animValue = Instance.new("ObjectValue")
 		animValue.Name = "SitAnimationTrack"
 		animValue.Value = sitTrack
 		animValue.Parent = chairClone
-	end
+	end)
 end
 
 function SeatService:SwapPlayerChair(player)
@@ -163,6 +167,28 @@ end
 
 function SeatService:RemovePlayerChair(player)
 	removePlayerChair(player)
+
+	-- Remove weld from player
+	local character = player.Character
+	if character then
+		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+		if humanoidRootPart then
+			local weld = humanoidRootPart:FindFirstChild("PlayerToChairWeld")
+			if weld then
+				weld:Destroy()
+			end
+		end
+
+		-- Stop sitting animation
+		local humanoid = character:FindFirstChild("Humanoid")
+		if humanoid then
+			for _, track in humanoid:GetPlayingAnimationTracks() do
+				if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
+					track:Stop()
+				end
+			end
+		end
+	end
 end
 
 local function onPlayerAdded(player)
