@@ -36,6 +36,7 @@ local hoverSound = soundsFolder:WaitForChild("Hover")
 local clickSound = soundsFolder:WaitForChild("Click")
 local rollSound = soundsFolder:WaitForChild("Roll")
 local rngModule = require(seatGame.Modules.RNGModule)
+local spinModule = require(script:WaitForChild("SpinModule"))
 
 --// Variables
 local isInventoryOpen = false
@@ -146,7 +147,7 @@ local function createChairDisplay(chairModel)
 	template.Parent = list
 end
 
-local function createSpinDisplay(chairModel)
+local function createSpinDisplay(chairModel, rngMod)
 	local template = spinTemplate:Clone()
 	template.Visible = true
 
@@ -163,8 +164,8 @@ local function createSpinDisplay(chairModel)
 	end
 
 	if rarityFrame then
-		local rarity = rngModule:GetSeatRarity(chairModel)
-		rarityFrame.BackgroundColor3 = rngModule:GetRarityColor(rarity)
+		local rarity = rngMod:GetSeatRarity(chairModel)
+		rarityFrame.BackgroundColor3 = rngMod:GetRarityColor(rarity)
 	end
 
 	return template
@@ -244,104 +245,16 @@ local function performSpin()
 	stopIdleRoll()
 	playSound(clickSound)
 
-	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") then
-			child:Destroy()
-		end
-	end
-
 	local models = seatModels:GetChildren()
-	local itemsPerSet = 50
-	local numberOfSets = 4
 
-	for i = 1, itemsPerSet * numberOfSets do
-		local randomModel = models[math.random(1, #models)]
-		local display = createSpinDisplay(randomModel)
-		display.LayoutOrder = i
-		display.Parent = spinList
-
-		if i % 10 == 0 then
-			task.wait()
+	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
+		if wonSeatName then
+			print("Won seat:", wonSeatName)
 		end
-	end
 
-	task.wait(0.1)
-
-	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.1)
-
-	local firstItem = nil
-	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") then
-			firstItem = child
-			break
-		end
-	end
-
-	if not firstItem then
+		task.wait(1.5)
 		isSpinning = false
 		startIdleRoll()
-		return
-	end
-
-	local itemWidth = firstItem.AbsoluteSize.X
-	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetIndex = math.random(140, 160)
-	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
-	local targetScroll = targetPosition
-
-	local startTime = os.clock()
-	local currentItemIndex = -1
-
-	local connection
-	connection = RunService.Heartbeat:Connect(function()
-		local elapsed = os.clock() - startTime
-
-		if elapsed >= SPIN_DURATION then
-			connection:Disconnect()
-			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
-
-			task.wait(0.2)
-
-			local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
-			local closestItem = nil
-			local closestDistance = math.huge
-
-			for _, child in spinList:GetChildren() do
-				if child:IsA("GuiObject") then
-					local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
-					local distance = math.abs(itemCenter - pickerCenter)
-					if distance < closestDistance then
-						closestDistance = distance
-						closestItem = child
-					end
-				end
-			end
-
-			if closestItem then
-				local nameLabel = closestItem:FindFirstChild("Name")
-				if nameLabel then
-					print("Won seat:", nameLabel.Text)
-				end
-			end
-
-			task.wait(1.5)
-			isSpinning = false
-			startIdleRoll()
-			return
-		end
-
-		local scrollProgress = elapsed / SPIN_DURATION
-		local scrollPosition = scrollProgress * targetScroll
-		spinList.CanvasPosition = Vector2.new(scrollPosition, 0)
-
-		local itemIndex = math.floor(scrollPosition / itemWidth)
-		if itemIndex ~= currentItemIndex and itemIndex % 3 == 0 then
-			currentItemIndex = itemIndex
-			playSound(rollSound)
-		elseif itemIndex ~= currentItemIndex then
-			currentItemIndex = itemIndex
-		end
 	end)
 end
 
