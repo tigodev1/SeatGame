@@ -125,11 +125,12 @@ local function populateSpinList()
 
 	local models = seatModels:GetChildren()
 
-	for i = 1, 25 do
-		local randomModel = models[math.random(1, #models)]
-		local display = createSpinDisplay(randomModel)
-		display.Parent = spinList
-		task.wait()
+	for loop = 1, 5 do
+		for i = 1, 10 do
+			local randomModel = models[math.random(1, #models)]
+			local display = createSpinDisplay(randomModel)
+			display.Parent = spinList
+		end
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
@@ -157,12 +158,12 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(1)
+	task.wait(0.2)
 
-	local duration = 6
+	local duration = 4
 	local elapsed = 0
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
-	local targetScroll = math.random(maxScroll * 0.6, maxScroll * 0.9)
+	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.8)
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
@@ -182,8 +183,7 @@ local function performSpin()
 		end
 
 		local progress = elapsed / duration
-		local eased = math.sin((progress * math.pi) / 2)
-		eased = eased * eased
+		local eased = 1 - math.pow(1 - progress, 4)
 		local currentScroll = eased * targetScroll
 
 		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
