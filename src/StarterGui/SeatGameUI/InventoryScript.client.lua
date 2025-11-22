@@ -54,13 +54,22 @@ local function playSound(sound)
 end
 
 --// Button Animation System
+local function scaleUDim2(udim2, scale)
+	return UDim2.new(
+		udim2.X.Scale * scale,
+		udim2.X.Offset * scale,
+		udim2.Y.Scale * scale,
+		udim2.Y.Offset * scale
+	)
+end
+
 local function setupButtonAnimation(button)
 	buttonSizes[button] = button.Size
 
 	button.MouseEnter:Connect(function()
 		playSound(hoverSound)
 		TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = buttonSizes[button] * 1.05
+			Size = scaleUDim2(buttonSizes[button], 1.05)
 		}):Play()
 	end)
 
@@ -72,13 +81,13 @@ local function setupButtonAnimation(button)
 
 	button.MouseButton1Down:Connect(function()
 		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = buttonSizes[button] * 0.95
+			Size = scaleUDim2(buttonSizes[button], 0.95)
 		}):Play()
 	end)
 
 	button.MouseButton1Up:Connect(function()
 		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = buttonSizes[button] * 1.05
+			Size = scaleUDim2(buttonSizes[button], 1.05)
 		}):Play()
 	end)
 end
