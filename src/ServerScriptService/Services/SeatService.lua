@@ -83,28 +83,16 @@ local function attachChairToPlayer(player, chairName)
 			part.CanCollide = false
 			part.Massless = true
 			part.CollisionGroup = "PlayerChair"
+
+			-- Set network ownership to prevent shaking
+			pcall(function()
+				part:SetNetworkOwner(player)
+			end)
 		end
 	end
 
-	-- Parent chair to workspace
-	chairClone.Parent = Workspace
-
-	-- Find ground position under player using raycast
-	local playerPosition = humanoidRootPart.Position
-	local rayOrigin = playerPosition + Vector3.new(0, 5, 0)
-	local rayDirection = Vector3.new(0, -100, 0)
-
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	raycastParams.FilterDescendantsInstances = {character, chairClone}
-
-	local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-
-	local groundY = raycastResult and raycastResult.Position.Y or (playerPosition.Y - 3)
-
-	-- Position AnchorPart on the ground at player's X,Z position
-	local anchorPosition = Vector3.new(playerPosition.X, groundY, playerPosition.Z)
-	anchorPart.CFrame = CFrame.new(anchorPosition)
+	-- Parent chair to character
+	chairClone.Parent = character
 
 	-- Weld all chair parts to the AnchorPart
 	for _, part in chairClone:GetDescendants() do
@@ -116,8 +104,18 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Anchor the AnchorPart so the chair stays on the ground
-	anchorPart.Anchored = true
+	-- Position the AnchorPart below the player (chair follows player)
+	local yOffset = -2.5
+	anchorPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, yOffset, 0)
+
+	-- Weld AnchorPart to player so chair follows movement
+	local anchorWeld = Instance.new("Weld")
+	anchorWeld.Name = "ChairToPlayerWeld"
+	anchorWeld.Part0 = humanoidRootPart
+	anchorWeld.Part1 = anchorPart
+	anchorWeld.C0 = CFrame.new(0, yOffset, 0)
+	anchorWeld.C1 = CFrame.new(0, 0, 0)
+	anchorWeld.Parent = anchorPart
 
 	-- Store reference
 	playerChairs[player] = chairClone
