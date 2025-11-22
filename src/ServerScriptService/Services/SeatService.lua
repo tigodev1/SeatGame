@@ -130,28 +130,25 @@ local function attachChairToPlayer(player, chairName)
 
 	chairClone.Parent = Workspace
 
-	local playerPos = humanoidRootPart.Position
+	local playerCFrame = humanoidRootPart.CFrame
+	local lookVec = playerCFrame.LookVector
+	local rotation = math.atan2(lookVec.X, lookVec.Z)
+
+	local seatOffsetY = seatPart.Position.Y - anchorPart.Position.Y
+
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
 	rayParams.FilterDescendantsInstances = {character, chairClone}
 
-	local rayResult = Workspace:Raycast(playerPos + Vector3.new(0, 5, 0), Vector3.new(0, -100, 0), rayParams)
-	local groundY = rayResult and rayResult.Position.Y or (playerPos.Y - 3)
+	local rayResult = Workspace:Raycast(playerCFrame.Position + Vector3.new(0, 5, 0), Vector3.new(0, -100, 0), rayParams)
+	local groundY = rayResult and rayResult.Position.Y or (playerCFrame.Position.Y - 3)
 
-	local lookVec = humanoidRootPart.CFrame.LookVector
-	local rotation = math.atan2(lookVec.X, lookVec.Z)
+	local targetAnchorY = playerCFrame.Position.Y - seatOffsetY
+	if targetAnchorY < groundY then
+		targetAnchorY = groundY
+	end
 
-	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
-
-	humanoidRootPart.Anchored = true
-
-	task.wait(0.05)
-
-	humanoidRootPart.CFrame = seatPart.CFrame
-
-	humanoid:ChangeState(Enum.HumanoidStateType.Seated)
-
-	task.wait(0.05)
+	anchorPart.CFrame = CFrame.new(playerCFrame.Position.X, targetAnchorY, playerCFrame.Position.Z) * CFrame.Angles(0, rotation, 0)
 
 	local weld = Instance.new("Weld")
 	weld.Name = "ChairToPlayerWeld"
@@ -161,11 +158,8 @@ local function attachChairToPlayer(player, chairName)
 	weld.C1 = CFrame.new()
 	weld.Parent = anchorPart
 
-	task.wait(0.05)
+	humanoid:ChangeState(Enum.HumanoidStateType.Seated)
 
-	humanoidRootPart.Anchored = false
-
-	task.wait(0.05)
 	local sitAnim = Instance.new("Animation")
 	sitAnim.AnimationId = "rbxassetid://2506281703"
 	local sitTrack = humanoid:LoadAnimation(sitAnim)
