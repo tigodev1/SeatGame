@@ -45,10 +45,9 @@ local buttonSizes = {}
 local idleRollConnection = nil
 
 --// Config
-local SPIN_DURATION = 4
 local IDLE_SCROLL_SPEED = 15
 
---// Sound System
+--// Functions
 local function playSound(sound)
 	local clone = sound:Clone()
 	clone.Parent = SoundService
@@ -58,7 +57,6 @@ local function playSound(sound)
 	end)
 end
 
---// Button Animation System
 local function scaleUDim2(udim2, scale)
 	return UDim2.new(
 		udim2.X.Scale * scale,
@@ -97,7 +95,6 @@ local function setupButtonAnimation(button)
 	end)
 end
 
---// Viewport Setup
 local function createViewportCamera(viewport)
 	local camera = Instance.new("Camera")
 	camera.Parent = viewport
@@ -128,7 +125,6 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	end
 end
 
---// Display Creation
 local function createChairDisplay(chairModel)
 	local template = chairTemplate:Clone()
 	template.Visible = true
@@ -171,7 +167,6 @@ local function createSpinDisplay(chairModel, rngMod)
 	return template
 end
 
---// Population Functions
 local function populateInventory()
 	for _, child in list:GetChildren() do
 		if child:IsA("GuiObject") then
@@ -213,7 +208,6 @@ local function populateSpinList()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 end
 
---// Idle Animation
 local function startIdleRoll()
 	if idleRollConnection then return end
 
@@ -238,7 +232,6 @@ local function stopIdleRoll()
 	end
 end
 
---// Spin System
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
@@ -258,7 +251,6 @@ local function performSpin()
 	end)
 end
 
---// Toggle Functions
 local function closeInventory()
 	isInventoryOpen = false
 	inventoryFrame.Visible = false

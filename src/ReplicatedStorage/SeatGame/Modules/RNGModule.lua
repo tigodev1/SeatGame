@@ -1,8 +1,10 @@
---// RNG Module
-local RNGModule = {}
+--// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
---// Configuration
+--// Module
+local RNGModule = {}
+
+--// Config
 RNGModule.RarityWeights = {
 	["Common"] = 70,
 	["Rare"] = 25,

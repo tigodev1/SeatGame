@@ -8,7 +8,7 @@ local SeatGame = ReplicatedStorage:WaitForChild("SeatGame")
 local SeatModels = SeatGame:WaitForChild("SeatModels")
 local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 
---// Seat Management
+--// Functions
 local function findAvailableSeatPosition()
 	local seatPositions = SeatsPlacing:GetChildren()
 	table.sort(seatPositions, function(a, b)
@@ -49,7 +49,6 @@ local function createSeatAtPosition(seatPosition, player)
 	return seatPart
 end
 
---// Player Control System
 local function setupPlayerControls(player, seatPart)
 	local character = player.Character or player.CharacterAdded:Wait()
 	local humanoid = character:WaitForChild("Humanoid")
@@ -102,7 +101,6 @@ local function seatPlayer(player)
 	setupPlayerControls(player, seatPart)
 end
 
---// Player Event Handlers
 local function onPlayerAdded(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
