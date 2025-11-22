@@ -56,22 +56,23 @@ local function createSeatAtPosition(seatPosition, player)
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
+	-- Set PrimaryPart if not already set
+	if not seatClone.PrimaryPart then
+		seatClone.PrimaryPart = seatPart
+	end
+
 	seatClone.Parent = seatFolder
 
-	-- Step 1: Position model at anchor point with matching rotation
-	seatClone:PivotTo(anchorPoint.CFrame)
+	-- Position PrimaryPart at anchor with rotation, then calculate vertical offset
+	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame
 
-	-- Step 2: Get bounding box to find the actual lowest point
+	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
-
-	-- Step 3: Calculate the lowest Y position of the model
 	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
-
-	-- Step 4: Calculate how much to move up so bottom sits on anchor point
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
-	-- Step 5: Move the model up by the adjustment amount
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
+	-- Apply vertical adjustment to PrimaryPart
+	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0)
 
 	local important = seatPosition:FindFirstChild("Important")
 	local occupant = important:FindFirstChild("Occupant")
@@ -173,22 +174,23 @@ function SeatMain:SwapPlayerChair(player)
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
+	-- Set PrimaryPart if not already set
+	if not seatClone.PrimaryPart then
+		seatClone.PrimaryPart = seatPart
+	end
+
 	seatClone.Parent = seatFolder
 
-	-- Step 1: Position model at anchor point with matching rotation
-	seatClone:PivotTo(anchorPoint.CFrame)
+	-- Position PrimaryPart at anchor with rotation, then calculate vertical offset
+	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame
 
-	-- Step 2: Get bounding box to find the actual lowest point
+	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
-
-	-- Step 3: Calculate the lowest Y position of the model
 	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
-
-	-- Step 4: Calculate how much to move up so bottom sits on anchor point
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
-	-- Step 5: Move the model up by the adjustment amount
-	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
+	-- Apply vertical adjustment to PrimaryPart
+	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0)
 
 	-- Re-seat the player
 	task.wait(0.1)
