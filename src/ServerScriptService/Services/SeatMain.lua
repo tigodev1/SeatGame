@@ -56,23 +56,18 @@ local function createSeatAtPosition(seatPosition, player)
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
-	-- Set PrimaryPart if not already set
-	if not seatClone.PrimaryPart then
-		seatClone.PrimaryPart = seatPart
-	end
-
 	seatClone.Parent = seatFolder
 
-	-- Position PrimaryPart at anchor with rotation, then calculate vertical offset
-	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame
+	-- Position model at anchor point with matching rotation
+	seatClone:PivotTo(anchorPoint.CFrame)
 
 	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
 	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
-	-- Apply vertical adjustment to PrimaryPart
-	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0)
+	-- Apply vertical adjustment
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
 
 	local important = seatPosition:FindFirstChild("Important")
 	local occupant = important:FindFirstChild("Occupant")
@@ -174,23 +169,18 @@ function SeatMain:SwapPlayerChair(player)
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
-	-- Set PrimaryPart if not already set
-	if not seatClone.PrimaryPart then
-		seatClone.PrimaryPart = seatPart
-	end
-
 	seatClone.Parent = seatFolder
 
-	-- Position PrimaryPart at anchor with rotation, then calculate vertical offset
-	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame
+	-- Position model at anchor point with matching rotation
+	seatClone:PivotTo(anchorPoint.CFrame)
 
 	-- Get bounding box to find the actual lowest point
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
 	local lowestY = modelCFrame.Position.Y - (modelSize.Y / 2)
 	local yAdjustment = anchorPoint.Position.Y - lowestY
 
-	-- Apply vertical adjustment to PrimaryPart
-	seatClone.PrimaryPart.CFrame = anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0)
+	-- Apply vertical adjustment
+	seatClone:PivotTo(anchorPoint.CFrame * CFrame.new(0, yAdjustment, 0))
 
 	-- Re-seat the player
 	task.wait(0.1)
