@@ -397,15 +397,7 @@ end
 --// UI Control
 local function closeInv()
 	invOpen = false
-
-	-- Smooth fade out
-	TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		GroupTransparency = 1
-	}):Play()
-
-	task.wait(0.15)
 	hide(invFrame)
-	invFrame.GroupTransparency = 0
 end
 
 local function toggleInv()
@@ -414,24 +406,10 @@ local function toggleInv()
 
 	if invOpen then
 		show(invFrame)
-		invFrame.GroupTransparency = 1
-
-		-- Smooth fade in
-		TweenService:Create(invFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			GroupTransparency = 0
-		}):Play()
-
 		updateInventory()
 		if spinFrame.Visible then hide(spinFrame) end
 	else
-		-- Smooth fade out
-		TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			GroupTransparency = 1
-		}):Play()
-
-		task.wait(0.15)
 		hide(invFrame)
-		invFrame.GroupTransparency = 0
 	end
 end
 
@@ -441,31 +419,9 @@ local function toggleSpin()
 
 	if not vis then
 		show(spinFrame)
-		spinFrame.GroupTransparency = 1
-
-		-- Smooth fade in
-		TweenService:Create(spinFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			GroupTransparency = 0
-		}):Play()
-
-		if invFrame.Visible then
-			-- Fade out inventory
-			TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				GroupTransparency = 1
-			}):Play()
-			task.wait(0.15)
-			hide(invFrame)
-			invFrame.GroupTransparency = 0
-		end
+		if invFrame.Visible then hide(invFrame) end
 	else
-		-- Smooth fade out
-		TweenService:Create(spinFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			GroupTransparency = 1
-		}):Play()
-
-		task.wait(0.15)
 		hide(spinFrame)
-		spinFrame.GroupTransparency = 0
 	end
 end
 
