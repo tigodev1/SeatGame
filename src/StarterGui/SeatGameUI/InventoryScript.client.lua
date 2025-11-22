@@ -91,6 +91,7 @@ local function createSpinDisplay(chairModel)
 
 	local viewport = template:FindFirstChild("ViewportFrame")
 	local nameLabel = template:FindFirstChild("Name")
+	local rarityFrame = template:FindFirstChild("Rarity")
 
 	if viewport then
 		setupChairInViewport(viewport, chairModel, false)
@@ -98,6 +99,11 @@ local function createSpinDisplay(chairModel)
 
 	if nameLabel then
 		nameLabel.Text = chairModel.Name
+	end
+
+	if rarityFrame then
+		local rarity = rngModule:GetSeatRarity(chairModel)
+		rarityFrame.BackgroundColor3 = rngModule:GetRarityColor(rarity)
 	end
 
 	return template
