@@ -17,7 +17,9 @@ local DataManager = {}
 --// Config
 local PROFILE_STORE_NAME = "PlayerData"
 local DEFAULT_DATA = {
-	OwnedChairs = {"Default"},
+	OwnedChairs = {
+		Default = true,
+	},
 	EquippedChair = "Default",
 }
 
@@ -42,15 +44,15 @@ function DataManager:OwnsChair(player, chairName)
 	local data = self:GetData(player)
 	if not data then return false end
 
-	return table.find(data.OwnedChairs, chairName) ~= nil
+	return data.OwnedChairs[chairName] == true
 end
 
 function DataManager:AddChair(player, chairName)
 	local data = self:GetData(player)
 	if not data then return false end
 
-	if not table.find(data.OwnedChairs, chairName) then
-		table.insert(data.OwnedChairs, chairName)
+	if not data.OwnedChairs[chairName] then
+		data.OwnedChairs[chairName] = true
 		return true
 	end
 
@@ -61,7 +63,7 @@ function DataManager:SetEquippedChair(player, chairName)
 	local data = self:GetData(player)
 	if not data then return false end
 
-	if table.find(data.OwnedChairs, chairName) then
+	if data.OwnedChairs[chairName] then
 		data.EquippedChair = chairName
 		return true
 	end
@@ -120,9 +122,21 @@ remoteFunction.OnServerInvoke = function(player, action, ...)
 		return DataManager:OwnsChair(player, chairName)
 	elseif action == "GetOwnedChairs" then
 		local data = DataManager:GetData(player)
-		return data and data.OwnedChairs or {"Default"}
+		if data then
+			local ownedList = {}
+			for chairName, isOwned in pairs(data.OwnedChairs) do
+				if isOwned then
+					table.insert(ownedList, chairName)
+				end
+			end
+			return ownedList
+		end
+		return {"Default"}
 	elseif action == "GetEquippedChair" then
 		return DataManager:GetEquippedChair(player)
+	elseif action == "UnlockChair" then
+		local chairName = ...
+		return DataManager:AddChair(player, chairName)
 	end
 	return nil
 end

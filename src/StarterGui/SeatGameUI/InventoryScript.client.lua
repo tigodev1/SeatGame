@@ -139,8 +139,17 @@ local function createChairDisplay(chairModel, isOwned)
 		if not isOwned then
 			local colorCorrection = Instance.new("ColorCorrectionEffect")
 			colorCorrection.Saturation = -1
-			colorCorrection.Brightness = -0.5
+			colorCorrection.Brightness = -0.8
+			colorCorrection.Contrast = -0.5
 			colorCorrection.Parent = viewport
+
+			local overlay = Instance.new("Frame")
+			overlay.Size = UDim2.new(1, 0, 1, 0)
+			overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			overlay.BackgroundTransparency = 0.6
+			overlay.BorderSizePixel = 0
+			overlay.ZIndex = 10
+			overlay.Parent = viewport
 		end
 	end
 
@@ -253,7 +262,12 @@ local function performSpin()
 
 	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
 		if wonSeatName then
-			print("Won seat:", wonSeatName)
+			local success = dataRemote:InvokeServer("UnlockChair", wonSeatName)
+			if success then
+				print("Unlocked new seat:", wonSeatName)
+			else
+				print("Already owned:", wonSeatName)
+			end
 		end
 
 		task.wait(1.5)
