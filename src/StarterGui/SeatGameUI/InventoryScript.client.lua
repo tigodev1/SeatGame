@@ -268,7 +268,7 @@ local function stopIdleRoll()
 end
 
 local function performSpin()
-	if isSpinning then return end
+	if isSpinning or not spinActionButton.Active then return end
 	isSpinning = true
 	stopIdleRoll()
 	playSound(clickSound)
@@ -282,6 +282,9 @@ local function performSpin()
 	local models = seatModels:GetChildren()
 
 	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
+		task.wait(0.1)
+		playSound(rewardSound)
+
 		isSpinning = false
 		spinActionButton.Active = true
 		spinActionButton.Text = "SPIN"
@@ -290,7 +293,6 @@ local function performSpin()
 		}):Play()
 
 		if wonSeatName then
-			playSound(rewardSound)
 			task.spawn(function()
 				dataRemote:InvokeServer("UnlockChair", wonSeatName)
 			end)

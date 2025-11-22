@@ -116,7 +116,20 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 	})
 
 	currentTween.Completed:Connect(function()
-		stopAllSounds()
+		if soundConnection then
+			soundConnection:Disconnect()
+			soundConnection = nil
+		end
+
+		task.delay(0.3, function()
+			for _, sound in soundClones do
+				if sound and sound.Parent then
+					sound:Stop()
+					sound:Destroy()
+				end
+			end
+			soundClones = {}
+		end)
 
 		local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
 		local closestItem = nil
