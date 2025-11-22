@@ -17,16 +17,15 @@ local SeatService = Knit.CreateService {
 }
 
 --// References
-local DataService = nil -- Will be set in KnitStart
+local DataService = nil
 
 --// State
-local playerChairs = {} -- [player] = chairModel
-local playerConnections = {} -- [player] = {connections}
-local playerAnimations = {} -- [player] = animationTrack
+local playerChairs = {}
+local playerConnections = {}
+local playerAnimations = {}
 
 --// Functions
 local function findChairModel(chairName)
-	-- Search through all rarity folders to find the chair
 	for _, folder in ipairs(SeatModels:GetChildren()) do
 		if folder:IsA("Folder") then
 			local model = folder:FindFirstChild(chairName)
@@ -39,13 +38,11 @@ local function findChairModel(chairName)
 end
 
 local function removePlayerChair(player)
-	-- Stop animation
 	if playerAnimations[player] then
 		playerAnimations[player]:Stop()
 		playerAnimations[player] = nil
 	end
 
-	-- Disconnect any connections
 	if playerConnections[player] then
 		for _, connection in playerConnections[player] do
 			connection:Disconnect()
@@ -53,7 +50,6 @@ local function removePlayerChair(player)
 		playerConnections[player] = nil
 	end
 
-	-- Destroy chair
 	local existingChair = playerChairs[player]
 	if existingChair and existingChair.Parent then
 		existingChair:Destroy()
@@ -69,21 +65,17 @@ local function attachChairToPlayer(player, chairName)
 	local humanoid = character:FindFirstChild("Humanoid")
 	if not humanoidRootPart or not humanoid then return end
 
-	-- Remove any existing chair
 	removePlayerChair(player)
 
-	-- If chairName is nil or "None", just remove the chair (normal walking)
 	if not chairName or chairName == "None" then
 		return
 	end
 
-	-- Find and clone the chair model
 	local chairModel = findChairModel(chairName)
 	if not chairModel then return end
 
 	local chairClone = chairModel:Clone()
 
-	-- Find the AnchorPart and Seat part
 	local anchorPart = chairClone:FindFirstChild("AnchorPart")
 	local seatPart = chairClone:FindFirstChild("Seat")
 
@@ -93,8 +85,6 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
-	-- CRITICAL: Configure ALL parts - iterate multiple times to ensure everything is set
-	-- First pass: Get all BaseParts including those in nested models
 	local allParts = {}
 	for _, obj in chairClone:GetDescendants() do
 		if obj:IsA("BasePart") then
@@ -102,14 +92,12 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Add the direct children too
 	for _, obj in chairClone:GetChildren() do
 		if obj:IsA("BasePart") then
 			table.insert(allParts, obj)
 		end
 	end
 
-	-- Configure EVERY part with collision disabled
 	for _, part in allParts do
 		part.Anchored = false
 		part.CanCollide = false
@@ -120,12 +108,10 @@ local function attachChairToPlayer(player, chairName)
 		end)
 	end
 
-	-- Explicitly set AnchorPart and Seat
 	anchorPart.Anchored = false
 	anchorPart.CanCollide = false
 	anchorPart.Massless = true
 
-	-- Disable the Seat's special behavior completely
 	if seatPart:IsA("Seat") then
 		seatPart.Disabled = true
 	end
@@ -133,7 +119,6 @@ local function attachChairToPlayer(player, chairName)
 	seatPart.CanCollide = false
 	seatPart.Massless = true
 
-	-- Weld all parts to AnchorPart
 	for _, part in allParts do
 		if part ~= anchorPart then
 			local weld = Instance.new("WeldConstraint")
@@ -143,10 +128,8 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Parent chair to workspace
 	chairClone.Parent = Workspace
 
-	-- Find ground position under player
 	local playerPos = humanoidRootPart.Position
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -155,29 +138,21 @@ local function attachChairToPlayer(player, chairName)
 	local rayResult = Workspace:Raycast(playerPos + Vector3.new(0, 5, 0), Vector3.new(0, -100, 0), rayParams)
 	local groundY = rayResult and rayResult.Position.Y or (playerPos.Y - 3)
 
-	-- Get player's facing direction
 	local lookVec = humanoidRootPart.CFrame.LookVector
 	local rotation = math.atan2(lookVec.X, lookVec.Z)
 
-	-- Position AnchorPart on ground at player's X,Z
 	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
 
-	-- FREEZE the player to prevent physics issues during positioning
 	humanoidRootPart.Anchored = true
 
-	-- Wait a moment for chair to settle
 	task.wait(0.05)
 
-	-- Teleport player to the seat position while frozen
 	humanoidRootPart.CFrame = seatPart.CFrame
 
-	-- Set to seated state
 	humanoid:ChangeState(Enum.HumanoidStateType.Seated)
 
-	-- Wait a tiny bit for state to apply
 	task.wait(0.05)
 
-	-- Create weld between player and chair
 	local weld = Instance.new("Weld")
 	weld.Name = "ChairToPlayerWeld"
 	weld.Part0 = humanoidRootPart
@@ -186,13 +161,10 @@ local function attachChairToPlayer(player, chairName)
 	weld.C1 = CFrame.new()
 	weld.Parent = anchorPart
 
-	-- Wait for weld to stabilize
 	task.wait(0.05)
 
-	-- UNFREEZE the player now that everything is welded
 	humanoidRootPart.Anchored = false
 
-	-- Play sitting animation
 	task.wait(0.05)
 	local sitAnim = Instance.new("Animation")
 	sitAnim.AnimationId = "rbxassetid://2506281703"
@@ -201,10 +173,8 @@ local function attachChairToPlayer(player, chairName)
 	sitTrack.Looped = true
 	sitTrack:Play()
 
-	-- Prevent jumping from unseating - monitor and re-play animation if needed
 	local unseatConnection = humanoid.StateChanged:Connect(function(_, newState)
 		if newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Freefall then
-			-- Player tried to jump or fall, keep them in sitting animation
 			humanoid:ChangeState(Enum.HumanoidStateType.Seated)
 			if sitTrack and not sitTrack.IsPlaying then
 				sitTrack:Play()
@@ -212,7 +182,6 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end)
 
-	-- Store references
 	playerChairs[player] = chairClone
 	playerConnections[player] = {unseatConnection}
 	playerAnimations[player] = sitTrack
@@ -231,7 +200,6 @@ local function onPlayerAdded(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
 
-		-- Get equipped chair and attach it
 		local equippedChairName = DataService:GetEquippedChair(player)
 		if equippedChairName and equippedChairName ~= "None" then
 			attachChairToPlayer(player, equippedChairName)
@@ -256,14 +224,12 @@ end
 
 --// Knit Lifecycle
 function SeatService:KnitInit()
-	-- Setup collision group for chairs
 	local PhysicsService = game:GetService("PhysicsService")
 	pcall(function()
 		PhysicsService:RegisterCollisionGroup("PlayerChair")
 		PhysicsService:CollisionGroupSetCollidable("PlayerChair", "PlayerChair", false)
 	end)
 
-	-- Initialize player lifecycle
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 
@@ -271,7 +237,6 @@ function SeatService:KnitInit()
 		task.spawn(onPlayerAdded, player)
 	end
 
-	-- Count total chair models across all rarity folders
 	local totalModels = 0
 	for _, folder in ipairs(SeatModels:GetChildren()) do
 		if folder:IsA("Folder") then
@@ -290,10 +255,8 @@ function SeatService:KnitInit()
 end
 
 function SeatService:KnitStart()
-	-- Get DataService reference
 	DataService = Knit.GetService("DataService")
 
-	-- Listen for chair equip events
 	local chairEquippedEvent = SeatGame:WaitForChild("ChairEquipped")
 	chairEquippedEvent.Event:Connect(function(player, chairName)
 		self:SwapPlayerChair(player)

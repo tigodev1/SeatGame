@@ -29,7 +29,6 @@ local DEFAULT_DATA = {
 local profileStore = ProfileStore.New(PROFILE_STORE_NAME, DEFAULT_DATA)
 local profiles = {}
 
---// BindableEvent for server-to-server communication
 local chairEquippedEvent = Instance.new("BindableEvent")
 chairEquippedEvent.Name = "ChairEquipped"
 chairEquippedEvent.Parent = SeatGame
@@ -101,16 +100,13 @@ function DataService:SetEquippedChair(player, chairName)
 	local data = profile.Data
 	if not data then return false end
 
-	-- Allow "None" to unequip, or any owned chair
 	if chairName == "None" or data.OwnedChairs[chairName] then
 		data.EquippedChair = chairName
 
-		-- Save to datastore
 		pcall(function()
 			profile:Save()
 		end)
 
-		-- Fire event to swap physical chair
 		chairEquippedEvent:Fire(player, chairName)
 
 		return true
@@ -136,7 +132,6 @@ function DataService:IncrementRolls(player)
 
 	data.Rolls = (data.Rolls or 0) + 1
 
-	-- Update leaderstats display
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
 		local rollsStat = leaderstats:FindFirstChild("Rolls")
@@ -145,7 +140,6 @@ function DataService:IncrementRolls(player)
 		end
 	end
 
-	-- Save to datastore
 	pcall(function()
 		profile:Save()
 	end)
@@ -161,7 +155,6 @@ function DataService:GetRolls(player)
 	return 0
 end
 
---// Client Methods (exposed via Knit's networking)
 function DataService.Client:OwnsChair(player, chairName)
 	return self.Server:OwnsChair(player, chairName)
 end
@@ -212,7 +205,6 @@ local function onPlayerAdded(player)
 
 		local seatModels = SeatGame:FindFirstChild("SeatModels")
 		if seatModels then
-			-- Iterate through all rarity folders (Common, Rare, Legendary, Miscellaneous)
 			for _, folder in ipairs(seatModels:GetChildren()) do
 				if folder:IsA("Folder") then
 					for _, seatModel in ipairs(folder:GetChildren()) do
@@ -226,12 +218,10 @@ local function onPlayerAdded(player)
 			end
 		end
 
-		-- Default chair is owned by everyone
 		if profile.Data.OwnedChairs["Default"] == nil then
 			profile.Data.OwnedChairs["Default"] = true
 		end
 
-		-- Create leaderstats
 		local leaderstats = Instance.new("Folder")
 		leaderstats.Name = "leaderstats"
 		leaderstats.Parent = player
@@ -270,7 +260,6 @@ end
 
 --// Knit Lifecycle
 function DataService:KnitInit()
-	-- Initialize player lifecycle
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 
@@ -286,7 +275,6 @@ function DataService:KnitInit()
 end
 
 function DataService:KnitStart()
-	-- Service fully ready
 end
 
 return DataService

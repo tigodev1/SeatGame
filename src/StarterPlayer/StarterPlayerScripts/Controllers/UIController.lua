@@ -1,8 +1,3 @@
---[[
-	UIController - Manages the seat game UI
-	Handles inventory display, equipping chairs, and spinning
---]]
-
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -19,9 +14,7 @@ local UIController = Knit.CreateController {
 }
 
 --// References
-local DataService = nil -- Will be set in KnitStart
-
--- UI elements (will be initialized in KnitInit)
+local DataService = nil
 local gui = nil
 local canvas = nil
 local buttons = nil
@@ -44,7 +37,6 @@ local spinAction = nil
 local chairTemplate = nil
 local spinTemplate = nil
 
--- Game elements
 local seatGame = nil
 local seats = nil
 local sounds = nil
@@ -59,9 +51,7 @@ local spin = nil
 local invOpen = false
 local buttonSizes = {}
 local equippedChair = "Default"
-local currentCategory = "Owned" -- "Owned" or "Index"
-
--- Forward declarations
+local currentCategory = "Owned"
 local updateInventory
 local equipChair
 local unequipChair
@@ -119,7 +109,6 @@ local function createCamera(vp)
 end
 
 local function setupViewport(vp, model, rotate, owned)
-	-- Set ViewportFrame properties to remove any colored outline/tint
 	vp.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	vp.Ambient = Color3.fromRGB(255, 255, 255)
 	vp.LightColor = Color3.fromRGB(255, 255, 255)
@@ -135,7 +124,6 @@ local function setupViewport(vp, model, rotate, owned)
 			end
 		end
 
-		-- Add blur effect for unowned chairs
 		local blur = Instance.new("BlurEffect")
 		blur.Size = 10
 		blur.Parent = cam
@@ -168,24 +156,20 @@ local function createChair(model, owned)
 	local name = item:FindFirstChild("Name")
 	if name then name.Text = model.Name end
 
-	-- Remove all outlines/borders completely
 	local rarity = item:FindFirstChild("Rarity")
 	if rarity then
 		rarity:Destroy()
 	end
 
-	-- Remove all UIStrokes (outlines)
 	for _, descendant in item:GetDescendants() do
 		if descendant:IsA("UIStroke") then
 			descendant:Destroy()
 		end
 	end
 
-	-- Setup equip button based on category
 	local equipBtn = item:FindFirstChild("Equip")
 	if equipBtn then
 		if currentCategory == "Owned" then
-			-- In Owned category, only show button if chair is owned
 			if owned then
 				local isEquipped = equippedChair == model.Name
 
@@ -208,7 +192,6 @@ local function createChair(model, owned)
 				equipBtn.Visible = false
 			end
 		else
-			-- In Index category, hide equip button completely
 			equipBtn.Visible = false
 		end
 	end
@@ -243,7 +226,6 @@ updateInventory = function()
 		end
 	end
 
-	-- Set CellPadding based on category
 	if invGridLayout then
 		if currentCategory == "Owned" then
 			invGridLayout.CellPadding = UDim2.new(0, 15, 0, 50)
@@ -252,7 +234,6 @@ updateInventory = function()
 		end
 	end
 
-	-- Get equipped chair from server (using Knit)
 	local success, equippedResult = pcall(function()
 		return DataService:GetEquippedChair():expect()
 	end)
@@ -260,7 +241,6 @@ updateInventory = function()
 		equippedChair = equippedResult
 	end
 
-	-- Get owned chairs list
 	local owned = {"Default"}
 	local ownedSuccess, ownedResult = pcall(function()
 		return DataService:GetOwnedChairs():expect()
@@ -269,7 +249,6 @@ updateInventory = function()
 		owned = ownedResult
 	end
 
-	-- Collect all chairs
 	local chairList = {}
 	for _, folder in seats:GetChildren() do
 		if folder:IsA("Folder") then
@@ -277,14 +256,11 @@ updateInventory = function()
 				if model:IsA("Model") then
 					local has = table.find(owned, model.Name) ~= nil
 
-					-- Filter based on category
 					if currentCategory == "Owned" then
-						-- Only show owned chairs
 						if has then
 							table.insert(chairList, {model = model, owned = has})
 						end
 					else
-						-- Show all chairs in Index
 						table.insert(chairList, {model = model, owned = has})
 					end
 				end
@@ -292,10 +268,8 @@ updateInventory = function()
 		end
 	end
 
-	-- Sort chairs
 	table.sort(chairList, function(a, b)
 		if currentCategory == "Owned" then
-			-- In Owned: equipped first, then alphabetically
 			local aEquipped = a.model.Name == equippedChair
 			local bEquipped = b.model.Name == equippedChair
 
@@ -307,7 +281,6 @@ updateInventory = function()
 		return a.model.Name < b.model.Name
 	end)
 
-	-- Create chair items
 	for _, entry in ipairs(chairList) do
 		createChair(entry.model, entry.owned)
 	end
@@ -317,28 +290,24 @@ end
 equipChair = function(chairName)
 	equippedChair = chairName
 
-	-- Save to server and update the physical chair (using Knit)
 	task.spawn(function()
 		pcall(function()
 			DataService:SetEquippedChair(chairName)
 		end)
 	end)
 
-	-- Update all chair buttons
 	updateInventory()
 end
 
 unequipChair = function()
 	equippedChair = "None"
 
-	-- Save to server and remove the physical chair (using Knit)
 	task.spawn(function()
 		pcall(function()
 			DataService:SetEquippedChair("None")
 		end)
 	end)
 
-	-- Update all chair buttons
 	updateInventory()
 end
 
@@ -350,22 +319,18 @@ local function updateCategoryHighlight()
 	local inactiveColor = Color3.fromRGB(173, 173, 173)
 
 	if currentCategory == "Owned" then
-		-- Animate Owned to active
 		TweenService:Create(ownedStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Color = activeColor
 		}):Play()
 
-		-- Animate Index to inactive
 		TweenService:Create(indexStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Color = inactiveColor
 		}):Play()
 	else
-		-- Animate Index to active
 		TweenService:Create(indexStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Color = activeColor
 		}):Play()
 
-		-- Animate Owned to inactive
 		TweenService:Create(ownedStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			Color = inactiveColor
 		}):Play()
@@ -378,7 +343,6 @@ local function switchToOwned()
 	playSound(clickSound)
 	currentCategory = "Owned"
 
-	-- Update immediately
 	updateInventory()
 	updateCategoryHighlight()
 end
@@ -389,7 +353,6 @@ local function switchToIndex()
 	playSound(clickSound)
 	currentCategory = "Index"
 
-	-- Update immediately
 	updateInventory()
 	updateCategoryHighlight()
 end
@@ -427,14 +390,12 @@ end
 
 --// Knit Lifecycle
 function UIController:KnitInit()
-	-- Disable reset button
 	task.spawn(function()
 		pcall(function()
 			StarterGui:SetCore("ResetButtonCallback", false)
 		end)
 	end)
 
-	-- Get UI references (wait for them to replicate)
 	local player = game:GetService("Players").LocalPlayer
 	local playerGui = player:WaitForChild("PlayerGui")
 	gui = playerGui:WaitForChild("SeatGameUI")
@@ -449,7 +410,6 @@ function UIController:KnitInit()
 	invList = invFrame:WaitForChild("List")
 	invGridLayout = invList:FindFirstChildOfClass("UIGridLayout")
 
-	-- Get UIStrokes for category buttons
 	ownedStroke = ownedButton:FindFirstChildOfClass("UIStroke")
 	indexStroke = indexButton:FindFirstChildOfClass("UIStroke")
 	spinFrame = canvas:WaitForChild("SpinningFrame")
@@ -459,12 +419,10 @@ function UIController:KnitInit()
 	picker = spinContainer:WaitForChild("Picker")
 	spinAction = spinFrame:WaitForChild("Spin")
 
-	-- Get templates from StarterPlayerScripts/Templates
 	local templatesFolder = script.Parent.Parent:WaitForChild("Templates")
 	chairTemplate = templatesFolder:WaitForChild("ChairTemplate")
 	spinTemplate = templatesFolder:WaitForChild("SpinTemplate")
 
-	-- Get game elements
 	seatGame = ReplicatedStorage:WaitForChild("SeatGame")
 	seats = seatGame:WaitForChild("SeatModels")
 	sounds = seatGame:WaitForChild("Sounds")
@@ -475,7 +433,6 @@ function UIController:KnitInit()
 	rng = require(seatGame.Modules.RNGModule)
 	spin = require(seatGame.Modules.SpinModule)
 
-	-- Setup UI
 	invFrame.Visible = false
 	spinFrame.Visible = false
 
@@ -501,12 +458,10 @@ function UIController:KnitInit()
 	ownedButton.MouseButton1Click:Connect(switchToOwned)
 	indexButton.MouseButton1Click:Connect(switchToIndex)
 
-	-- Set initial category highlight
 	updateCategoryHighlight()
 end
 
 function UIController:KnitStart()
-	-- Get DataService reference
 	DataService = Knit.GetService("DataService")
 
 	if not DataService then
@@ -514,7 +469,6 @@ function UIController:KnitStart()
 		return
 	end
 
-	-- Init Spin (pass DataService instead of RemoteFunction)
 	spin:Init({
 		spinList = spinList,
 		spinContainer = spinContainer,
@@ -525,7 +479,7 @@ function UIController:KnitStart()
 		rewardSound = rewardSound,
 		rngModule = rng,
 		createDisplayFunc = createSpin,
-		dataService = DataService -- Changed from dataRemote to dataService
+		dataService = DataService
 	})
 
 	print("✓ UIController Initialized", {

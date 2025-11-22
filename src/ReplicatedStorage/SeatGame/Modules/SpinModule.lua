@@ -1,24 +1,13 @@
---[[
-	SpinModule - Slot Machine Spinning System
-	Features:
-	- Smooth idle scrolling at 20px/sec
-	- Exponential easing for dramatic slow-down
-	- Instant reward feedback
-	- 2 second highlight celebration
---]]
-
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 
 local SpinModule = {}
 
--- State
 local isSpinning = false
 local config = nil
 local idleConnection = nil
 
--- Constants
 local IDLE_SCROLL_SPEED = 20
 local SPIN_DURATION = 4.5
 local TOTAL_ITEMS = 200
@@ -29,9 +18,6 @@ local HIGHLIGHT_DURATION = 2
 local EASING_STYLE = Enum.EasingStyle.Exponential
 local EASING_DIRECTION = Enum.EasingDirection.Out
 
---[[
-	Sound Helper
---]]
 local function playSound(sound)
 	if not sound then return end
 
@@ -46,9 +32,6 @@ local function playSound(sound)
 	end)
 end
 
---[[
-	Idle Animation
---]]
 local function startIdleScroll()
 	if idleConnection then return end
 
@@ -76,9 +59,6 @@ local function stopIdleScroll()
 	end
 end
 
---[[
-	List Management
---]]
 local function clearList()
 	for _, child in pairs(config.list:GetChildren()) do
 		if child:IsA("GuiObject") then
@@ -112,9 +92,6 @@ local function populateList(winner)
 	task.wait(0.1)
 end
 
---[[
-	Calculate Target Position
---]]
 local function calculateTargetPosition()
 	local firstItem = config.list:FindFirstChild("Item_1")
 	if not firstItem then
@@ -132,9 +109,6 @@ local function calculateTargetPosition()
 	return math.clamp(targetScroll, 0, maxScroll)
 end
 
---[[
-	Roll Sound Thread
---]]
 local function createSoundThread()
 	local soundActive = true
 	local lastPosition = 0
@@ -162,9 +136,6 @@ local function createSoundThread()
 	end
 end
 
---[[
-	Find Winner Element
---]]
 local function findWinnerElement()
 	local pickerCenterX = config.picker.AbsolutePosition.X + (config.picker.AbsoluteSize.X / 2)
 
@@ -186,9 +157,6 @@ local function findWinnerElement()
 	return closestItem
 end
 
---[[
-	Highlight Winner with Pulsing Effect
---]]
 local function highlightWinner(item)
 	if not item then return end
 
@@ -205,7 +173,6 @@ local function highlightWinner(item)
 	)
 	pulseTween:Play()
 
-	-- Fade out smoothly before cleanup
 	task.delay(HIGHLIGHT_DURATION - 0.3, function()
 		if stroke then
 			local fadeTween = TweenService:Create(
@@ -226,9 +193,6 @@ local function highlightWinner(item)
 	end)
 end
 
---[[
-	Get Item Name
---]]
 local function getItemName(item)
 	if not item then return nil end
 
@@ -240,9 +204,6 @@ local function getItemName(item)
 	return nil
 end
 
---[[
-	Main Spin Function
---]]
 local function executeSpin()
 	if isSpinning then return end
 
@@ -252,7 +213,6 @@ local function executeSpin()
 	config.button.Active = false
 	config.button.Text = "SPINNING..."
 
-	-- Increment rolls stat
 	task.spawn(function()
 		pcall(function()
 			config.data:IncrementRolls()
@@ -287,14 +247,12 @@ local function executeSpin()
 
 	stopSounds()
 
-	-- Find winner and give INSTANT feedback
 	local winnerElement = findWinnerElement()
 	local winnerName = getItemName(winnerElement)
 
 	highlightWinner(winnerElement)
 	playSound(config.rewardSound)
 
-	-- Save to player data (async)
 	if winnerName then
 		task.spawn(function()
 			pcall(function()
@@ -303,7 +261,6 @@ local function executeSpin()
 		end)
 	end
 
-	-- Wait for highlight to finish before transitioning to idle
 	task.wait(HIGHLIGHT_DURATION)
 
 	config.button.Active = true
@@ -313,13 +270,9 @@ local function executeSpin()
 	startIdleScroll()
 end
 
---[[
-	Initialize
---]]
 function SpinModule:Init(cfg)
 	if config then return end
 
-	-- Validate config
 	assert(cfg.spinList, "Missing spinList")
 	assert(cfg.spinContainer, "Missing spinContainer")
 	assert(cfg.picker, "Missing picker")
@@ -342,7 +295,6 @@ function SpinModule:Init(cfg)
 		data = cfg.dataService
 	}
 
-	-- Create initial preview items
 	for i = 1, 40 do
 		local randomModel = config.models[math.random(1, #config.models)]
 		local gui = config.makeDisplay(randomModel, config.rng)
@@ -364,9 +316,6 @@ function SpinModule:Init(cfg)
 	})
 end
 
---[[
-	Cleanup
---]]
 function SpinModule:Cleanup()
 	stopIdleScroll()
 	clearList()

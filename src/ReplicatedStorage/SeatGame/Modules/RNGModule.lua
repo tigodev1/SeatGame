@@ -4,7 +4,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --// Module
 local RNGModule = {}
 
---// Config
 RNGModule.RarityWeights = {
 	["Common"] = 50,
 	["Uncommon"] = 30,
@@ -15,21 +14,19 @@ RNGModule.RarityWeights = {
 }
 
 RNGModule.RarityColors = {
-	["Common"] = Color3.fromRGB(180, 180, 180),      -- Gray
-	["Uncommon"] = Color3.fromRGB(85, 255, 85),      -- Green
-	["Rare"] = Color3.fromRGB(85, 170, 255),         -- Blue
-	["Epic"] = Color3.fromRGB(170, 85, 255),         -- Purple
-	["Legendary"] = Color3.fromRGB(255, 170, 0),     -- Gold
-	["Mythical"] = Color3.fromRGB(255, 50, 150),     -- Pink/Magenta
+	["Common"] = Color3.fromRGB(180, 180, 180),
+	["Uncommon"] = Color3.fromRGB(85, 255, 85),
+	["Rare"] = Color3.fromRGB(85, 170, 255),
+	["Epic"] = Color3.fromRGB(170, 85, 255),
+	["Legendary"] = Color3.fromRGB(255, 170, 0),
+	["Mythical"] = Color3.fromRGB(255, 50, 150),
 }
 
---// Functions
 function RNGModule:GetSeatModels()
 	local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
 	local seatModels = seatGame:WaitForChild("SeatModels")
 	local allModels = {}
 
-	-- Get all models from rarity folders (exclude Miscellaneous)
 	for _, folder in ipairs(seatModels:GetChildren()) do
 		if folder:IsA("Folder") and folder.Name ~= "Miscellaneous" then
 			for _, model in ipairs(folder:GetChildren()) do
@@ -44,7 +41,6 @@ function RNGModule:GetSeatModels()
 end
 
 function RNGModule:GetSeatRarity(seatModel)
-	-- Rarity is determined by parent folder name
 	local parent = seatModel.Parent
 	if parent and parent:IsA("Folder") then
 		local rarityName = parent.Name
@@ -73,7 +69,6 @@ function RNGModule:GetSeatsByRarity(rarityName)
 end
 
 function RNGModule:GetWeightedRandom()
-	-- STEP 1: Roll for rarity tier (independent of folder contents)
 	local totalWeight = 0
 	for _, weight in pairs(self.RarityWeights) do
 		totalWeight = totalWeight + weight
@@ -82,7 +77,6 @@ function RNGModule:GetWeightedRandom()
 	local random = Random.new()
 	local roll = random:NextNumber(0, totalWeight)
 
-	-- Determine which rarity was rolled
 	local selectedRarity = nil
 	local currentWeight = 0
 
@@ -94,19 +88,16 @@ function RNGModule:GetWeightedRandom()
 		end
 	end
 
-	-- STEP 2: Get a random chair from the selected rarity
 	if selectedRarity then
 		local seatsInRarity = self:GetSeatsByRarity(selectedRarity)
 		if #seatsInRarity > 0 then
 			local randomIndex = random:NextInteger(1, #seatsInRarity)
 			return seatsInRarity[randomIndex]
 		else
-			-- If rarity folder is empty, fallback to Common
 			warn(string.format("[RNG] Rolled %s (%.2f%%) but folder is empty! Falling back to Common.", selectedRarity, (self.RarityWeights[selectedRarity] / totalWeight) * 100))
 		end
 	end
 
-	-- Fallback to Common if something goes wrong
 	local commonSeats = self:GetSeatsByRarity("Common")
 	if #commonSeats > 0 then
 		return commonSeats[random:NextInteger(1, #commonSeats)]
@@ -137,7 +128,6 @@ function RNGModule:GetRarityColor(rarityName)
 	return self.RarityColors[rarityName] or Color3.fromRGB(255, 255, 255)
 end
 
--- Print rarity chances on initialization
 local totalWeight = 0
 for _, weight in pairs(RNGModule.RarityWeights) do
 	totalWeight = totalWeight + weight
