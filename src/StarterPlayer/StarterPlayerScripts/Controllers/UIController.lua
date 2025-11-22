@@ -40,7 +40,7 @@ local chairTemplate = nil
 local spinTemplate = nil
 
 -- Game elements
-local game = nil
+local seatGame = nil
 local seats = nil
 local sounds = nil
 local hoverSound = nil
@@ -340,15 +340,15 @@ function UIController:KnitInit()
 	spinTemplate = gui:WaitForChild("SpinTemplate")
 
 	-- Get game elements
-	game = ReplicatedStorage:WaitForChild("SeatGame")
-	seats = game:WaitForChild("SeatModels")
-	sounds = game:WaitForChild("Sounds")
+	seatGame = ReplicatedStorage:WaitForChild("SeatGame")
+	seats = seatGame:WaitForChild("SeatModels")
+	sounds = seatGame:WaitForChild("Sounds")
 	hoverSound = sounds:WaitForChild("Hover")
 	clickSound = sounds:WaitForChild("Click")
 	rollSound = sounds:WaitForChild("Roll")
 	rewardSound = sounds:WaitForChild("Reward")
-	rng = require(game.Modules.RNGModule)
-	spin = require(game.Modules.SpinModule)
+	rng = require(seatGame.Modules.RNGModule)
+	spin = require(seatGame.Modules.SpinModule)
 
 	-- Setup UI
 	invFrame.Visible = false
