@@ -46,19 +46,37 @@ git pull origin claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
 
 4. **Create seat positions:**
    - In Workspace > SeatsPlacing, create numbered folders (1, 2, 3, etc.)
-   - In each numbered folder, create a folder called "Seat"
-   - In each Seat folder, create an invisible Part called "AnchorPoint":
-     - Anchored = true
-     - CanCollide = false
-     - Transparency = 1
-     - Size = (1, 1, 1)
-   - Position these AnchorPoint parts where you want seats to appear
+   - In each numbered folder, create:
+     - Folder named "Important"
+       - StringValue named "Occupant" (set Value = "")
+     - Folder named "Seat"
+       - Part named "AnchorPoint":
+         - Anchored = true
+         - CanCollide = false
+         - Transparency = 1
+         - Size = (1, 1, 1)
+         - Position where you want the seat to appear
+         - Rotate to set which direction the seat faces
 
 5. **Create the Default seat:**
    - In ReplicatedStorage > SeatGame > SeatModels, create a Model called "Default"
    - Inside this model, create a Seat part (the actual seat players sit on)
    - Add any additional parts for the chair design (backrest, legs, etc.)
    - All parts should be Anchored = true
+
+6. **Set up Inventory UI:**
+   - In StarterGui, create a ScreenGui named "SeatGameUI"
+   - Inside ScreenGui, create:
+     - Frame named "Canvas"
+       - Frame named "ButtonContainer"
+         - TextButton named "Inventory"
+       - Frame named "Inventory" (set Visible = false)
+         - ScrollingFrame named "List"
+     - Frame named "ChairTemplate" (set Visible = false)
+       - ViewportFrame
+       - TextLabel named "Name"
+   - Copy `src/StarterGui/SeatGameUI/InventoryScript.client.lua` into the ScreenGui
+   - Copy `src/StarterPlayer/StarterPlayerScripts/DisableReset.client.lua` into StarterPlayer > StarterPlayerScripts
 
 ## 📁 Required Structure
 
