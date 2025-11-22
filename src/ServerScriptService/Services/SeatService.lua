@@ -52,17 +52,15 @@ local function attachChairToPlayer(player, chairName)
 	local humanoid = character:FindFirstChild("Humanoid")
 	if not humanoidRootPart or not humanoid then return end
 
+	-- Jump to unseat from current chair
+	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	task.wait(0.1)
+
 	-- Remove any existing chair
 	removePlayerChair(player)
 
 	-- If chairName is nil or "None", just remove the chair (normal walking)
 	if not chairName or chairName == "None" then
-		-- Make sure sitting animation is stopped
-		for _, track in humanoid:GetPlayingAnimationTracks() do
-			if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
-				track:Stop()
-			end
-		end
 		return
 	end
 
@@ -78,6 +76,13 @@ local function attachChairToPlayer(player, chairName)
 
 	if not anchorPart or not seatPart then
 		warn("Chair missing AnchorPart or Seat:", chairName)
+		chairClone:Destroy()
+		return
+	end
+
+	-- Make sure Seat part is actually a Seat
+	if not seatPart:IsA("Seat") then
+		warn("Seat part is not a Seat object:", chairName)
 		chairClone:Destroy()
 		return
 	end
@@ -139,32 +144,12 @@ local function attachChairToPlayer(player, chairName)
 	anchorWeld.C1 = CFrame.new(0, 0, 0)
 	anchorWeld.Parent = anchorPart
 
-	-- Teleport player to sit on the seat
-	-- Calculate where the player should be to sit on the seat
-	local seatPosition = seatPart.CFrame.Position
-	local seatTop = seatPosition + Vector3.new(0, 2, 0)
-	humanoidRootPart.CFrame = CFrame.new(seatTop) * CFrame.Angles(0, math.atan2(lookDirection.X, lookDirection.Z), 0)
-
 	-- Store reference
 	playerChairs[player] = chairClone
 
-	-- Play sitting animation
-	task.spawn(function()
-		task.wait(0.1)
-
-		local sitAnim = Instance.new("Animation")
-		sitAnim.AnimationId = "rbxassetid://2506281703"
-		local sitTrack = humanoid:LoadAnimation(sitAnim)
-		sitTrack.Priority = Enum.AnimationPriority.Action
-		sitTrack.Looped = true
-		sitTrack:Play()
-
-		-- Store animation track
-		local animValue = Instance.new("ObjectValue")
-		animValue.Name = "SitAnimationTrack"
-		animValue.Value = sitTrack
-		animValue.Parent = chairClone
-	end)
+	-- Sit the player on the seat (Roblox handles the animation automatically)
+	task.wait(0.1)
+	seatPart:Sit(humanoid)
 end
 
 function SeatService:SwapPlayerChair(player)
@@ -173,20 +158,6 @@ function SeatService:SwapPlayerChair(player)
 end
 
 function SeatService:RemovePlayerChair(player)
-	-- Stop sitting animation first
-	local character = player.Character
-	if character then
-		local humanoid = character:FindFirstChild("Humanoid")
-		if humanoid then
-			for _, track in humanoid:GetPlayingAnimationTracks() do
-				if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
-					track:Stop()
-				end
-			end
-		end
-	end
-
-	-- Remove chair (this also destroys all welds)
 	removePlayerChair(player)
 end
 
