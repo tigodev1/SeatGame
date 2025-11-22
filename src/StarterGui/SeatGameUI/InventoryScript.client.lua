@@ -5,15 +5,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Instances
 local screenGui = script.Parent :: ScreenGui
-local canvas = screenGui:WaitForChild("Canvas") :: Frame
-local buttonContainer = canvas:WaitForChild("ButtonContainer") :: Frame
-local inventoryButton = buttonContainer:WaitForChild("Inventory") :: TextButton
-local inventoryFrame = canvas:WaitForChild("Inventory") :: Frame
-local list = inventoryFrame:WaitForChild("List") :: ScrollingFrame
-local chairTemplate = script:WaitForChild("ChairTemplate") :: Frame
+local canvas = screenGui:WaitForChild("Canvas", 10) :: Frame
+local buttonContainer = canvas:WaitForChild("ButtonContainer", 10) :: Frame
+local inventoryButton = buttonContainer:WaitForChild("Inventory", 10) :: TextButton
+local inventoryFrame = canvas:WaitForChild("Inventory", 10) :: Frame
+local list = inventoryFrame:WaitForChild("List", 10) :: ScrollingFrame
+local chairTemplate = script:WaitForChild("ChairTemplate", 10) :: Frame
 
-local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
-local seatModels = seatGame:WaitForChild("SeatModels")
+local seatGame = ReplicatedStorage:WaitForChild("SeatGame", 10)
+local seatModels = seatGame:WaitForChild("SeatModels", 10)
 
 --// Variables
 local isInventoryOpen = false
@@ -59,7 +59,7 @@ end
 
 local function populateInventory()
 	for _, child in ipairs(list:GetChildren()) do
-		if child:IsA("Frame") then
+		if child:IsA("Frame") or child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
@@ -81,5 +81,5 @@ local function toggleInventory()
 end
 
 --// Initialize
-inventoryButton.Activated:Connect(toggleInventory)
 inventoryFrame.Visible = false
+inventoryButton.MouseButton1Click:Connect(toggleInventory)
