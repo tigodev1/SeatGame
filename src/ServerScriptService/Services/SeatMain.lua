@@ -60,11 +60,7 @@ local function createSeatAtPosition(seatPosition: Folder, player: Player): Seat?
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
 	local yOffset = modelSize.Y / 2
 
-	local targetCFrame = CFrame.new(
-		anchorPoint.Position.X,
-		anchorPoint.Position.Y + yOffset,
-		anchorPoint.Position.Z
-	)
+	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
 	seatClone:PivotTo(targetCFrame)
 
 	local important = seatPosition:FindFirstChild("Important")
