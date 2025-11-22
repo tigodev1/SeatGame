@@ -218,12 +218,6 @@ local function performSpin()
 	isSpinning = true
 	playSound(clickSound)
 
-	local wonSeat = rngModule:GetWeightedRandom()
-	if not wonSeat then
-		isSpinning = false
-		return
-	end
-
 	for _, child in spinList:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
@@ -231,13 +225,11 @@ local function performSpin()
 	end
 
 	local models = seatModels:GetChildren()
-	local winningIndex = math.random(30, 45)
 
 	for i = 1, 50 do
-		local modelToUse = i == winningIndex and wonSeat or models[math.random(1, #models)]
-		local display = createSpinDisplay(modelToUse)
+		local randomModel = models[math.random(1, #models)]
+		local display = createSpinDisplay(randomModel)
 		display.LayoutOrder = i
-		display.Name = "SpinItem_" .. i
 		display.Parent = spinList
 
 		if i % 10 == 0 then
@@ -245,20 +237,12 @@ local function performSpin()
 		end
 	end
 
-	task.wait(0.5)
+	task.wait(0.3)
 	spinList.CanvasPosition = Vector2.new(0, 0)
 	task.wait(0.1)
 
-	local firstItem = spinList:FindFirstChild("SpinItem_1")
-	if not firstItem then
-		isSpinning = false
-		return
-	end
-
-	local itemWidth = firstItem.AbsoluteSize.X
-	local containerWidth = spinContainer.AbsoluteSize.X
-	local itemCenterOffset = (winningIndex - 1) * itemWidth + (itemWidth / 2)
-	local targetScroll = itemCenterOffset - (containerWidth / 2)
+	local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
+	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.85)
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
@@ -281,7 +265,30 @@ local function performSpin()
 				rollSoundInstance = nil
 			end
 
-			print("Won seat:", wonSeat.Name)
+			task.wait(0.2)
+
+			local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
+			local closestItem = nil
+			local closestDistance = math.huge
+
+			for _, child in spinList:GetChildren() do
+				if child:IsA("GuiObject") then
+					local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
+					local distance = math.abs(itemCenter - pickerCenter)
+					if distance < closestDistance then
+						closestDistance = distance
+						closestItem = child
+					end
+				end
+			end
+
+			if closestItem then
+				local nameLabel = closestItem:FindFirstChild("Name")
+				if nameLabel then
+					print("Won seat:", nameLabel.Text)
+				end
+			end
+
 			task.wait(1.5)
 			isSpinning = false
 			return
