@@ -349,8 +349,9 @@ local function performSpin()
 		spinList.CanvasPosition = Vector2.new(scrollProgress * targetScroll, 0)
 
 		if rollSoundInstance then
-			local speed = 2.0 - (scrollProgress * 1.85)
-			rollSoundInstance.PlaybackSpeed = math.max(0.15, speed)
+			local velocity = 3 * math.pow(1 - progress, 2)
+			local speed = 0.2 + (velocity * 0.6)
+			rollSoundInstance.PlaybackSpeed = speed
 		end
 	end)
 end
