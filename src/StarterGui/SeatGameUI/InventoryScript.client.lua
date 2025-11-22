@@ -135,6 +135,9 @@ local function populateSpinList()
 		for i, model in ipairs(selectedSeats) do
 			local display = createSpinDisplay(model)
 			display.Parent = spinList
+			if i % 3 == 0 then
+				task.wait()
+			end
 		end
 	end
 
@@ -143,16 +146,23 @@ end
 
 local function getItemUnderPicker()
 	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
+	local closestChild = nil
+	local closestDistance = math.huge
 
 	for _, child in spinList:GetChildren() do
 		if child:IsA("GuiObject") and child.Visible then
-			local itemLeft = child.AbsolutePosition.X
-			local itemRight = itemLeft + child.AbsoluteSize.X
+			local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
+			local distance = math.abs(itemCenter - pickerCenter)
 
-			if pickerCenter >= itemLeft and pickerCenter <= itemRight then
-				return child:FindFirstChild("Name")
+			if distance < closestDistance then
+				closestDistance = distance
+				closestChild = child
 			end
 		end
+	end
+
+	if closestChild then
+		return closestChild:FindFirstChild("Name")
 	end
 
 	return nil
@@ -163,9 +173,9 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(0.3)
+	task.wait(0.5)
 
-	local duration = 4
+	local duration = 5
 	local elapsed = 0
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
 	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.8)
@@ -188,7 +198,13 @@ local function performSpin()
 		end
 
 		local progress = elapsed / duration
-		local eased = 1 - math.pow(1 - progress, 4)
+		local eased
+		if progress < 0.7 then
+			eased = progress / 0.7 * 0.85
+		else
+			local slowProgress = (progress - 0.7) / 0.3
+			eased = 0.85 + (1 - math.pow(1 - slowProgress, 5)) * 0.15
+		end
 		local currentScroll = eased * targetScroll
 
 		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
