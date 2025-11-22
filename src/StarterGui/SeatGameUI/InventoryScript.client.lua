@@ -71,19 +71,23 @@ end
 
 local function animateFrameIn(frame)
 	frame.Visible = true
-	frame.GroupTransparency = 1
+	frame.Position = frame.Position + UDim2.new(0, 0, 0.05, 0)
+	frame.BackgroundTransparency = 1
+
 	TweenService:Create(frame, FRAME_TWEEN_INFO, {
-		GroupTransparency = 0
+		Position = frame.Position - UDim2.new(0, 0, 0.05, 0),
+		BackgroundTransparency = frame.BackgroundTransparency
 	}):Play()
 end
 
 local function animateFrameOut(frame, callback)
+	local originalPos = frame.Position
 	local tween = TweenService:Create(frame, FRAME_TWEEN_INFO, {
-		GroupTransparency = 1
+		Position = frame.Position + UDim2.new(0, 0, 0.05, 0)
 	})
 	tween.Completed:Connect(function()
 		frame.Visible = false
-		frame.GroupTransparency = 0
+		frame.Position = originalPos
 		if callback then callback() end
 	end)
 	tween:Play()

@@ -110,7 +110,7 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 	local overshoot = itemWidth * 1.5
 	local targetScroll = basePosition + overshoot
 	local startTime = os.clock()
-	local currentItemIndex = -1
+	local lastSoundPosition = -itemWidth
 	local settleStartTime = nil
 	local settleStartPosition = 0
 
@@ -155,6 +155,11 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 			local easedProgress = easeOutCubic(settleProgress)
 			local currentPosition = settleStartPosition + (basePosition - settleStartPosition) * easedProgress
 			spinList.CanvasPosition = Vector2.new(currentPosition, 0)
+
+			if currentPosition - lastSoundPosition >= itemWidth * 0.8 then
+				playSound(rollSound)
+				lastSoundPosition = currentPosition
+			end
 			return
 		end
 
@@ -169,12 +174,9 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 		local scrollPosition = easedProgress * targetScroll
 		spinList.CanvasPosition = Vector2.new(scrollPosition, 0)
 
-		local itemIndex = math.floor(scrollPosition / itemWidth)
-		if itemIndex ~= currentItemIndex and itemIndex % 2 == 0 then
-			currentItemIndex = itemIndex
+		if scrollPosition - lastSoundPosition >= itemWidth * 0.8 then
 			playSound(rollSound)
-		elseif itemIndex ~= currentItemIndex then
-			currentItemIndex = itemIndex
+			lastSoundPosition = scrollPosition
 		end
 	end)
 end
