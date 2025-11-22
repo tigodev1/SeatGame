@@ -27,6 +27,24 @@ local DEFAULT_DATA = {
 local profileStore = ProfileStore.New(PROFILE_STORE_NAME, DEFAULT_DATA)
 local profiles = {}
 
+--// Studio Check
+if game:GetService("RunService"):IsStudio() then
+	local DataStoreService = game:GetService("DataStoreService")
+	local success = pcall(function()
+		DataStoreService:GetDataStore("_StudioAPICheck"):GetAsync("test")
+	end)
+
+	if not success then
+		warn("========================================")
+		warn("[DataManager] STUDIO API SERVICES NOT ENABLED!")
+		warn("[DataManager] Data will NOT persist in Studio.")
+		warn("[DataManager] To enable: Game Settings > Security > Enable Studio Access to API Services")
+		warn("========================================")
+	else
+		print("[DataManager] Studio API Services are enabled - data will persist")
+	end
+end
+
 --// Functions
 function DataManager:GetProfile(player)
 	return profiles[player]
@@ -49,17 +67,35 @@ end
 
 function DataManager:AddChair(player, chairName)
 	local profile = self:GetProfile(player)
-	if not profile then return false end
+	if not profile then
+		warn(`[DataManager] No profile found for {player.Name}`)
+		return false
+	end
 
 	local data = profile.Data
-	if not data then return false end
+	if not data then
+		warn(`[DataManager] No data found in profile for {player.Name}`)
+		return false
+	end
 
 	if not data.OwnedChairs[chairName] then
 		data.OwnedChairs[chairName] = true
-		profile:Save()
+		print(`[DataManager] Unlocked {chairName} for {player.Name}`)
+
+		local success, err = pcall(function()
+			profile:Save()
+		end)
+
+		if success then
+			print(`[DataManager] Successfully saved profile for {player.Name}`)
+		else
+			warn(`[DataManager] Failed to save profile for {player.Name}: {err}`)
+		end
+
 		return true
 	end
 
+	print(`[DataManager] {player.Name} already owns {chairName}`)
 	return false
 end
 
@@ -96,17 +132,24 @@ local function onPlayerAdded(player)
 
 		profiles[player] = profile
 
+		print(`[DataManager] Profile loaded for {player.Name}`)
+		print(`[DataManager] Current owned chairs:`, profile.Data.OwnedChairs)
+		print(`[DataManager] Equipped chair:`, profile.Data.EquippedChair)
+
 		profile.OnSessionEnd:Connect(function()
+			print(`[DataManager] Session ended for {player.Name}`)
 			profiles[player] = nil
 			player:Kick("Session released")
 		end)
 
 		if player:IsDescendantOf(Players) then
-			print(`Profile loaded for {player.Name}`)
+			print(`[DataManager] {player.Name} is in game, profile session active`)
 		else
+			print(`[DataManager] {player.Name} left before profile loaded, ending session`)
 			profile:EndSession()
 		end
 	else
+		warn(`[DataManager] Failed to load profile for {player.Name}`)
 		player:Kick("Failed to load data")
 	end
 end
@@ -114,8 +157,23 @@ end
 local function onPlayerRemoving(player)
 	local profile = profiles[player]
 	if profile then
-		profile:EndSession()
+		print(`[DataManager] Player {player.Name} leaving, ending session...`)
+		print(`[DataManager] Final owned chairs:`, profile.Data.OwnedChairs)
+		print(`[DataManager] Final equipped chair:`, profile.Data.EquippedChair)
+
+		local success, err = pcall(function()
+			profile:EndSession()
+		end)
+
+		if success then
+			print(`[DataManager] Profile session ended successfully for {player.Name}`)
+		else
+			warn(`[DataManager] Error ending session for {player.Name}: {err}`)
+		end
+
 		profiles[player] = nil
+	else
+		warn(`[DataManager] No profile found for leaving player {player.Name}`)
 	end
 end
 
