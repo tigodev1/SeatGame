@@ -227,7 +227,7 @@ local function performSpin()
 	end
 
 	local models = seatModels:GetChildren()
-	local winningIndex = 35
+	local winningIndex = math.random(30, 45)
 
 	for i = 1, 50 do
 		local modelToUse = i == winningIndex and wonSeat or models[math.random(1, #models)]
