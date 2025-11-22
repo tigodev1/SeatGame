@@ -238,8 +238,10 @@ updateInventory = function()
 
 	if ownedSuccess and ownedResult then
 		owned = ownedResult
+		print("[Inventory] Got owned chairs:", owned)
+		print("[Inventory] Owned count:", #owned)
 	else
-		warn("Failed to get owned chairs:", ownedResult)
+		warn("[Inventory] Failed to get owned chairs:", ownedResult)
 		owned = {"Default"} -- Fallback to just Default
 	end
 
@@ -251,6 +253,7 @@ updateInventory = function()
 			for _, model in folder:GetChildren() do
 				if model:IsA("Model") then
 					local has = table.find(owned, model.Name) ~= nil
+					print(string.format("[Inventory] Chair '%s': owned = %s", model.Name, tostring(has)))
 					table.insert(chairList, {model = model, owned = has})
 				end
 			end

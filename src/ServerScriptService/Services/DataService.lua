@@ -174,8 +174,10 @@ function DataService.Client:GetOwnedChairs(player)
 				table.insert(ownedList, chairName)
 			end
 		end
+		print(string.format("[DataService] GetOwnedChairs for %s: %d chairs", player.Name, #ownedList))
 		return ownedList
 	end
+	warn(string.format("[DataService] No data for player %s, returning Default only", player.Name))
 	return {"Default"}
 end
 
