@@ -1,6 +1,14 @@
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+--// Disable Reset
+task.spawn(function()
+	pcall(function()
+		StarterGui:SetCore("ResetButtonCallback", false)
+	end)
+end)
 
 --// Instances
 local screenGui = script.Parent
