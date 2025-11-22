@@ -243,6 +243,9 @@ end
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
+
+	local savedScrollPosition = spinList.CanvasPosition.X
+
 	stopIdleRoll()
 	playSound(clickSound)
 
@@ -265,7 +268,10 @@ local function performSpin()
 		end
 	end
 
-	task.wait(0.3)
+	task.wait(0.1)
+
+	spinList.CanvasPosition = Vector2.new(savedScrollPosition, 0)
+	task.wait(0.1)
 
 	local currentScroll = spinList.CanvasPosition.X
 	local firstItem = spinList:FindFirstChild("SpinItem_1")
