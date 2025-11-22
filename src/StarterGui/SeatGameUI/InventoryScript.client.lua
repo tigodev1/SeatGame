@@ -286,18 +286,18 @@ local function performSpin()
 		end
 
 		local eased
-		if progress < 0.7 then
-			local t = progress / 0.7
-			eased = t * t * (3 - 2 * t) * 0.85
+		if progress < 0.5 then
+			local t = progress / 0.5
+			eased = t * t * (3 - 2 * t) * 0.7
 		else
-			local t = (progress - 0.7) / 0.3
-			eased = 0.85 + ((1 - math.pow(1 - t, 4)) * 0.15)
+			local t = (progress - 0.5) / 0.5
+			eased = 0.7 + ((1 - math.pow(1 - t, 3)) * 0.3)
 		end
 
 		spinList.CanvasPosition = Vector2.new(eased * targetScrollX, 0)
 
 		if rollSoundInstance then
-			local currentSpeed = 2.0 - (eased * 1.6)
+			local currentSpeed = 2.5 - (progress * 2.1)
 			rollSoundInstance.PlaybackSpeed = math.max(0.4, currentSpeed)
 		end
 	end)
