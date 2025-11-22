@@ -3,8 +3,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 
---// Disable Reset
 task.spawn(function()
 	pcall(function()
 		StarterGui:SetCore("ResetButtonCallback", false)
@@ -18,7 +18,9 @@ local buttonContainer = canvas:WaitForChild("ButtonContainer")
 local inventoryButton = buttonContainer:WaitForChild("InventoryButton")
 local spinButton = buttonContainer:WaitForChild("SpinButton")
 local inventoryFrame = canvas:WaitForChild("Inventory")
+local inventoryCloseButton = inventoryFrame:WaitForChild("CloseButton")
 local spinningFrame = canvas:WaitForChild("SpinningFrame")
+local spinningCloseButton = spinningFrame:WaitForChild("CloseButton")
 local spinContainer = spinningFrame:WaitForChild("SpinContainer")
 local spinList = spinContainer:WaitForChild("List")
 local picker = spinContainer:WaitForChild("Picker")
@@ -29,13 +31,59 @@ local spinTemplate = script:WaitForChild("SpinTemplate")
 
 local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
 local seatModels = seatGame:WaitForChild("SeatModels")
+local soundsFolder = seatGame:WaitForChild("Sounds")
+local hoverSound = soundsFolder:WaitForChild("Hover")
+local clickSound = soundsFolder:WaitForChild("Click")
+local rollSound = soundsFolder:WaitForChild("Roll")
 local rngModule = require(seatGame.Modules.RNGModule)
 
 --// Variables
 local isInventoryOpen = false
 local isSpinning = false
+local buttonSizes = {}
+local rollSoundInstance = nil
 
---// Functions
+--// Sound System
+local function playSound(sound)
+	local clone = sound:Clone()
+	clone.Parent = SoundService
+	clone:Play()
+	task.delay(sound.TimeLength, function()
+		clone:Destroy()
+	end)
+end
+
+--// Button Animation System
+local function setupButtonAnimation(button)
+	buttonSizes[button] = button.Size
+
+	button.MouseEnter:Connect(function()
+		playSound(hoverSound)
+		TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = buttonSizes[button] * 1.05
+		}):Play()
+	end)
+
+	button.MouseLeave:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = buttonSizes[button]
+		}):Play()
+	end)
+
+	button.MouseButton1Down:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = buttonSizes[button] * 0.95
+		}):Play()
+	end)
+
+	button.MouseButton1Up:Connect(function()
+		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = buttonSizes[button] * 1.05
+		}):Play()
+	end)
+end
+
+--// Viewport Setup
 local function createViewportCamera(viewport)
 	local camera = Instance.new("Camera")
 	camera.Parent = viewport
@@ -66,6 +114,7 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	end
 end
 
+--// Display Creation
 local function createChairDisplay(chairModel)
 	local template = chairTemplate:Clone()
 	template.Visible = true
@@ -108,6 +157,7 @@ local function createSpinDisplay(chairModel)
 	return template
 end
 
+--// Population Functions
 local function populateInventory()
 	for _, child in list:GetChildren() do
 		if child:IsA("GuiObject") then
@@ -149,9 +199,11 @@ local function populateSpinList()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 end
 
+--// Spin System
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
+	playSound(clickSound)
 
 	local wonSeat = rngModule:GetWeightedRandom()
 	if not wonSeat then
@@ -205,6 +257,11 @@ local function performSpin()
 	local targetPosition = (winningPosition - 1) * itemWidth
 	local finalScroll = targetPosition - (containerWidth / 2) + (itemWidth / 2)
 
+	rollSoundInstance = rollSound:Clone()
+	rollSoundInstance.Parent = SoundService
+	rollSoundInstance.Looped = true
+	rollSoundInstance:Play()
+
 	local duration = 5
 	local startTime = tick()
 
@@ -215,6 +272,13 @@ local function performSpin()
 		if elapsed >= duration then
 			connection:Disconnect()
 			spinList.CanvasPosition = Vector2.new(finalScroll, 0)
+
+			if rollSoundInstance then
+				rollSoundInstance:Stop()
+				rollSoundInstance:Destroy()
+				rollSoundInstance = nil
+			end
+
 			print("Won seat:", wonSeat.Name)
 			task.wait(1)
 			isSpinning = false
@@ -232,10 +296,26 @@ local function performSpin()
 		end
 
 		spinList.CanvasPosition = Vector2.new(eased * finalScroll, 0)
+
+		if rollSoundInstance then
+			local speed = 1 - eased
+			rollSoundInstance.PlaybackSpeed = 0.5 + (speed * 1.5)
+		end
 	end)
 end
 
+--// Toggle Functions
+local function closeInventory()
+	isInventoryOpen = false
+	inventoryFrame.Visible = false
+end
+
+local function closeSpinning()
+	spinningFrame.Visible = false
+end
+
 local function toggleInventory()
+	playSound(clickSound)
 	isInventoryOpen = not isInventoryOpen
 	inventoryFrame.Visible = isInventoryOpen
 
@@ -246,6 +326,7 @@ local function toggleInventory()
 end
 
 local function toggleSpinning()
+	playSound(clickSound)
 	spinningFrame.Visible = not spinningFrame.Visible
 	inventoryFrame.Visible = false
 
@@ -257,6 +338,21 @@ end
 --// Initialize
 inventoryFrame.Visible = false
 spinningFrame.Visible = false
+
+setupButtonAnimation(inventoryButton)
+setupButtonAnimation(spinButton)
+setupButtonAnimation(spinActionButton)
+setupButtonAnimation(inventoryCloseButton)
+setupButtonAnimation(spinningCloseButton)
+
 inventoryButton.MouseButton1Click:Connect(toggleInventory)
 spinButton.MouseButton1Click:Connect(toggleSpinning)
 spinActionButton.MouseButton1Click:Connect(performSpin)
+inventoryCloseButton.MouseButton1Click:Connect(function()
+	playSound(clickSound)
+	closeInventory()
+end)
+spinningCloseButton.MouseButton1Click:Connect(function()
+	playSound(clickSound)
+	closeSpinning()
+end)
