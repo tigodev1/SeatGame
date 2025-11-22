@@ -42,10 +42,12 @@ local isInventoryOpen = false
 local isSpinning = false
 local buttonSizes = {}
 local rollSoundInstance = nil
+local idleRollConnection = nil
 
 --// Config
 local SPIN_DURATION = 4
 local SLOWDOWN_TIME = 1
+local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
 local function playSound(sound)
@@ -212,10 +214,36 @@ local function populateSpinList()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 end
 
+--// Idle Animation
+local function startIdleRoll()
+	if idleRollConnection then return end
+
+	idleRollConnection = RunService.Heartbeat:Connect(function(dt)
+		if not isSpinning and spinList then
+			local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
+			if maxScroll > 0 then
+				local newPosition = spinList.CanvasPosition.X + (IDLE_SCROLL_SPEED * dt)
+				if newPosition > maxScroll then
+					newPosition = 0
+				end
+				spinList.CanvasPosition = Vector2.new(newPosition, 0)
+			end
+		end
+	end)
+end
+
+local function stopIdleRoll()
+	if idleRollConnection then
+		idleRollConnection:Disconnect()
+		idleRollConnection = nil
+	end
+end
+
 --// Spin System
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
+	stopIdleRoll()
 	playSound(clickSound)
 
 	for _, child in spinList:GetChildren() do
@@ -238,11 +266,23 @@ local function performSpin()
 	end
 
 	task.wait(0.3)
-	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.1)
 
+	local currentScroll = spinList.CanvasPosition.X
+	local firstItem = spinList:FindFirstChild("SpinItem_1")
+	if not firstItem then
+		isSpinning = false
+		startIdleRoll()
+		return
+	end
+
+	local itemWidth = firstItem.AbsoluteSize.X
+	local containerWidth = spinContainer.AbsoluteSize.X
+	local targetIndex = math.random(30, 45)
+	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
-	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.85)
+
+	local fullRotations = 2
+	local targetScroll = currentScroll + (maxScroll * fullRotations) + (targetPosition - (currentScroll % maxScroll))
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
@@ -291,6 +331,7 @@ local function performSpin()
 
 			task.wait(1.5)
 			isSpinning = false
+			startIdleRoll()
 			return
 		end
 
@@ -329,6 +370,7 @@ end
 
 local function closeSpinning()
 	spinningFrame.Visible = false
+	stopIdleRoll()
 end
 
 local function toggleInventory()
@@ -349,6 +391,9 @@ local function toggleSpinning()
 
 	if spinningFrame.Visible then
 		populateSpinList()
+		startIdleRoll()
+	else
+		stopIdleRoll()
 	end
 end
 
