@@ -45,8 +45,6 @@ local idleRollConnection = nil
 
 --// Config
 local SPIN_DURATION = 7
-local FAST_DURATION = 3
-local SLOW_DURATION = SPIN_DURATION - FAST_DURATION
 local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
