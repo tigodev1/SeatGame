@@ -7,8 +7,10 @@ local SoundService = game:GetService("SoundService")
 local SpinModule = {}
 
 --// Config
-local SPIN_DURATION = 5
-local TOTAL_ITEMS = 200
+local SPIN_DURATION = 6
+local TOTAL_ITEMS = 250
+local ANTICIPATION_TIME = 0.4
+local SETTLE_TIME = 0.5
 
 --// State
 local currentTween = nil
@@ -39,6 +41,44 @@ local function playSound(sound)
 	table.insert(soundClones, clone)
 end
 
+local function fadeOutSounds(duration)
+	if soundConnection then
+		soundConnection:Disconnect()
+		soundConnection = nil
+	end
+
+	local startTime = tick()
+	local startVolumes = {}
+
+	for i, sound in ipairs(soundClones) do
+		if sound and sound.Parent then
+			startVolumes[i] = sound.Volume
+		end
+	end
+
+	local fadeConnection
+	fadeConnection = RunService.Heartbeat:Connect(function()
+		local elapsed = tick() - startTime
+		local alpha = math.min(elapsed / duration, 1)
+
+		for i, sound in ipairs(soundClones) do
+			if sound and sound.Parent then
+				sound.Volume = startVolumes[i] * (1 - alpha)
+			end
+		end
+
+		if alpha >= 1 then
+			fadeConnection:Disconnect()
+			for _, sound in ipairs(soundClones) do
+				if sound and sound.Parent then
+					sound:Destroy()
+				end
+			end
+			soundClones = {}
+		end
+	end)
+end
+
 function SpinModule:Stop()
 	if currentTween then
 		currentTween:Cancel()
@@ -49,8 +89,15 @@ function SpinModule:Stop()
 	isSpinning = false
 end
 
+function SpinModule:IsSpinning()
+	return isSpinning
+end
+
 function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createDisplayFunc, onComplete)
-	if isSpinning then return end
+	if isSpinning then
+		warn("[SpinModule] Already spinning!")
+		return
+	end
 	isSpinning = true
 
 	self:Stop()
@@ -62,7 +109,7 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 	end
 
 	local wonSeat = rngModule:GetWeightedRandom()
-	local winnerIndex = math.floor(TOTAL_ITEMS * 0.85)
+	local winnerIndex = math.floor(TOTAL_ITEMS * 0.82)
 
 	for i = 1, TOTAL_ITEMS do
 		local model = (i == winnerIndex) and wonSeat or models[math.random(1, #models)]
@@ -70,7 +117,7 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 		display.LayoutOrder = i
 		display.Parent = spinList
 
-		if i % 25 == 0 then
+		if i % 30 == 0 then
 			task.wait()
 		end
 	end
@@ -96,41 +143,47 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 	local containerWidth = spinContainer.AbsoluteSize.X
 	local targetPosition = (winnerIndex - 1) * itemWidth - (containerWidth / 2) + (itemWidth / 2)
 
+	-- Anticipation phase (slow start)
+	local anticipationTween = TweenService:Create(spinList,
+		TweenInfo.new(ANTICIPATION_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{CanvasPosition = Vector2.new(itemWidth * 3, 0)}
+	)
+	anticipationTween:Play()
+	anticipationTween.Completed:Wait()
+
+	-- Main spin phase
 	local lastSoundPos = 0
 	soundConnection = RunService.Heartbeat:Connect(function()
 		local currentPos = spinList.CanvasPosition.X
-		if currentPos - lastSoundPos >= itemWidth then
+		if currentPos - lastSoundPos >= itemWidth * 0.8 then
 			playSound(rollSound)
 			lastSoundPos = currentPos
 		end
 	end)
 
-	local tweenInfo = TweenInfo.new(
+	local mainTweenInfo = TweenInfo.new(
 		SPIN_DURATION,
-		Enum.EasingStyle.Quart,
+		Enum.EasingStyle.Cubic,
 		Enum.EasingDirection.Out
 	)
 
-	currentTween = TweenService:Create(spinList, tweenInfo, {
+	currentTween = TweenService:Create(spinList, mainTweenInfo, {
 		CanvasPosition = Vector2.new(targetPosition, 0)
 	})
 
 	currentTween.Completed:Connect(function()
-		if soundConnection then
-			soundConnection:Disconnect()
-			soundConnection = nil
-		end
+		fadeOutSounds(SETTLE_TIME)
 
-		task.delay(0.3, function()
-			for _, sound in soundClones do
-				if sound and sound.Parent then
-					sound:Stop()
-					sound:Destroy()
-				end
-			end
-			soundClones = {}
-		end)
+		-- Settle animation (elastic bounce)
+		local settleTween = TweenService:Create(spinList,
+			TweenInfo.new(SETTLE_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+			{CanvasPosition = Vector2.new(targetPosition, 0)}
+		)
+		settleTween:Play()
 
+		task.wait(SETTLE_TIME)
+
+		-- Find winner
 		local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
 		local closestItem = nil
 		local closestDistance = math.huge
@@ -144,6 +197,32 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 					closestItem = child
 				end
 			end
+		end
+
+		-- Highlight winner
+		if closestItem then
+			local highlight = Instance.new("Frame")
+			highlight.Name = "WinnerHighlight"
+			highlight.Size = UDim2.new(1, 10, 1, 10)
+			highlight.Position = UDim2.new(0.5, 0, 0.5, 0)
+			highlight.AnchorPoint = Vector2.new(0.5, 0.5)
+			highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+			highlight.BackgroundTransparency = 0.5
+			highlight.BorderSizePixel = 0
+			highlight.ZIndex = 10
+			highlight.Parent = closestItem
+
+			local glow = TweenService:Create(highlight,
+				TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, true),
+				{BackgroundTransparency = 0.8}
+			)
+			glow:Play()
+
+			task.delay(2, function()
+				if highlight and highlight.Parent then
+					highlight:Destroy()
+				end
+			end)
 		end
 
 		local wonSeatName = nil
