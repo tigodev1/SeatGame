@@ -170,9 +170,9 @@ local function performSpin()
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
-		elapsed = elapsed + (dt * 60)
+		elapsed = elapsed + dt
 
-		if elapsed >= duration * 60 then
+		if elapsed >= duration then
 			connection:Disconnect()
 
 			local wonLabel = getItemUnderPicker()
@@ -185,7 +185,7 @@ local function performSpin()
 			return
 		end
 
-		local progress = elapsed / (duration * 60)
+		local progress = elapsed / duration
 		local eased = math.sin((progress * math.pi) / 2)
 		eased = eased * eased
 		local currentScroll = eased * targetScroll
