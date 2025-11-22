@@ -326,7 +326,7 @@ spin:Init({
 	spinContainer = spinContainer,
 	picker = picker,
 	spinButton = spinAction,
-	models = seats:GetChildren(),
+	models = rng:GetSeatModels(),
 	rollSound = rollSound,
 	rewardSound = rewardSound,
 	rngModule = rng,
