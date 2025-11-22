@@ -44,7 +44,7 @@ local buttonSizes = {}
 local idleRollConnection = nil
 
 --// Config
-local SPIN_DURATION = 7
+local SPIN_DURATION = 4
 local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
@@ -252,7 +252,7 @@ local function performSpin()
 
 	local models = seatModels:GetChildren()
 	local itemsPerSet = 50
-	local numberOfSets = 10
+	local numberOfSets = 4
 
 	for i = 1, itemsPerSet * numberOfSets do
 		local randomModel = models[math.random(1, #models)]
@@ -286,7 +286,7 @@ local function performSpin()
 
 	local itemWidth = firstItem.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetIndex = math.random(420, 450)
+	local targetIndex = math.random(140, 160)
 	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
 	local targetScroll = targetPosition
 
@@ -336,9 +336,11 @@ local function performSpin()
 		spinList.CanvasPosition = Vector2.new(scrollPosition, 0)
 
 		local itemIndex = math.floor(scrollPosition / itemWidth)
-		if itemIndex ~= currentItemIndex then
+		if itemIndex ~= currentItemIndex and itemIndex % 3 == 0 then
 			currentItemIndex = itemIndex
 			playSound(rollSound)
+		elseif itemIndex ~= currentItemIndex then
+			currentItemIndex = itemIndex
 		end
 	end)
 end
