@@ -104,16 +104,26 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Position the AnchorPart below the player (chair follows player)
-	local yOffset = -2.5
-	anchorPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, yOffset, 0)
+	-- Calculate offset from AnchorPart to Seat in the chair's local space
+	local anchorToSeatOffset = anchorPart.CFrame:ToObjectSpace(seatPart.CFrame)
+
+	-- We want the player to sit ON the seat part, so we need to position
+	-- the chair such that the seat is at the right height
+	-- The seat should be about 2 studs below the player's root
+	local desiredSeatYOffset = -2
+
+	-- Calculate where the anchor needs to be to put the seat at the right spot
+	local anchorOffset = CFrame.new(0, desiredSeatYOffset, 0) * anchorToSeatOffset:Inverse()
+
+	-- Position the AnchorPart below the player with correct rotation
+	anchorPart.CFrame = humanoidRootPart.CFrame * anchorOffset
 
 	-- Weld AnchorPart to player so chair follows movement
 	local anchorWeld = Instance.new("Weld")
 	anchorWeld.Name = "ChairToPlayerWeld"
 	anchorWeld.Part0 = humanoidRootPart
 	anchorWeld.Part1 = anchorPart
-	anchorWeld.C0 = CFrame.new(0, yOffset, 0)
+	anchorWeld.C0 = anchorOffset
 	anchorWeld.C1 = CFrame.new(0, 0, 0)
 	anchorWeld.Parent = anchorPart
 
