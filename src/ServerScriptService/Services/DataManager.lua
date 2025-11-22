@@ -90,7 +90,7 @@ local function onPlayerAdded(player)
 
 		profiles[player] = profile
 
-		profile:ListenToRelease(function()
+		profile.OnSessionEnd:Connect(function()
 			profiles[player] = nil
 			player:Kick("Session released")
 		end)
