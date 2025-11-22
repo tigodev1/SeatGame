@@ -70,12 +70,12 @@ local function attachChairToPlayer(player, chairName)
 
 	local chairClone = chairModel:Clone()
 
-	-- Find the AnchorPart and Seat2 part
+	-- Find the AnchorPart and Seat part
 	local anchorPart = chairClone:FindFirstChild("AnchorPart")
-	local seat2Part = chairClone:FindFirstChild("Seat2")
+	local seatPart = chairClone:FindFirstChild("Seat")
 
-	if not anchorPart or not seat2Part then
-		warn("Chair missing AnchorPart or Seat2:", chairName)
+	if not anchorPart or not seatPart then
+		warn("Chair missing AnchorPart or Seat:", chairName)
 		chairClone:Destroy()
 		return
 	end
@@ -140,9 +140,9 @@ local function attachChairToPlayer(player, chairName)
 	-- Store reference
 	playerChairs[player] = chairClone
 
-	-- Teleport player to Seat2 position to trigger automatic sitting
+	-- Teleport player to Seat position to trigger automatic sitting
 	task.wait(0.1)
-	humanoidRootPart.CFrame = seat2Part.CFrame
+	humanoidRootPart.CFrame = seatPart.CFrame
 end
 
 function SeatService:SwapPlayerChair(player)
