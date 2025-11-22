@@ -16,23 +16,21 @@ Join the game → instantly sitting
 
 ### Getting the Code in VS Code
 
-1. **Open VS Code** and open the terminal (Ctrl+` or Terminal → New Terminal)
+**If you haven't cloned yet:**
+```bash
+git clone https://github.com/tigodev1/SeatGame.git
+cd SeatGame
+git checkout claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
+git pull
+```
 
-2. **Clone the repository:**
-   ```bash
-   git clone https://github.com/tigodev1/SeatGame.git
-   cd SeatGame
-   ```
-
-3. **Switch to the game branch:**
-   ```bash
-   git checkout claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
-   ```
-
-4. **Pull latest changes:**
-   ```bash
-   git pull
-   ```
+**If you already have it cloned:**
+```bash
+cd SeatGame
+git fetch origin
+git checkout claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
+git pull origin claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
+```
 
 ### Using the Scripts in Roblox Studio
 
