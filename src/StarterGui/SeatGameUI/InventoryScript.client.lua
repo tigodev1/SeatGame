@@ -243,9 +243,6 @@ end
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
-
-	local savedScrollPosition = spinList.CanvasPosition.X
-
 	stopIdleRoll()
 	playSound(clickSound)
 
@@ -270,10 +267,9 @@ local function performSpin()
 
 	task.wait(0.1)
 
-	spinList.CanvasPosition = Vector2.new(savedScrollPosition, 0)
+	spinList.CanvasPosition = Vector2.new(0, 0)
 	task.wait(0.1)
 
-	local currentScroll = spinList.CanvasPosition.X
 	local firstItem = spinList:FindFirstChild("SpinItem_1")
 	if not firstItem then
 		isSpinning = false
@@ -288,7 +284,7 @@ local function performSpin()
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
 
 	local fullRotations = 2
-	local targetScroll = currentScroll + (maxScroll * fullRotations) + (targetPosition - (currentScroll % maxScroll))
+	local targetScroll = (maxScroll * fullRotations) + targetPosition
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
