@@ -162,19 +162,22 @@ local function attachChairToPlayer(player, chairName)
 	-- Position AnchorPart on ground at player's X,Z
 	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
 
+	-- FREEZE the player to prevent physics issues during positioning
+	humanoidRootPart.Anchored = true
+
 	-- Wait a moment for chair to settle
 	task.wait(0.05)
 
-	-- Teleport player to the seat position
+	-- Teleport player to the seat position while frozen
 	humanoidRootPart.CFrame = seatPart.CFrame
 
-	-- Immediately set to seated state to prevent ragdoll
+	-- Set to seated state
 	humanoid:ChangeState(Enum.HumanoidStateType.Seated)
 
 	-- Wait a tiny bit for state to apply
 	task.wait(0.05)
 
-	-- NOW weld the chair to player (after both are in position)
+	-- Create weld between player and chair
 	local weld = Instance.new("Weld")
 	weld.Name = "ChairToPlayerWeld"
 	weld.Part0 = humanoidRootPart
@@ -185,6 +188,9 @@ local function attachChairToPlayer(player, chairName)
 
 	-- Wait for weld to stabilize
 	task.wait(0.05)
+
+	-- UNFREEZE the player now that everything is welded
+	humanoidRootPart.Anchored = false
 
 	-- Play sitting animation
 	task.wait(0.05)
