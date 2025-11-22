@@ -2,11 +2,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 --// Instances
 local SeatGame = ReplicatedStorage:WaitForChild("SeatGame")
 local SeatModels = SeatGame:WaitForChild("SeatModels")
 local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
+
+--// Modules
+local DataManager = require(ServerScriptService.Services.DataManager)
 
 --// Functions
 local function findAvailableSeatPosition()
@@ -31,8 +35,9 @@ end
 local function createSeatAtPosition(seatPosition, player)
 	local seatFolder = seatPosition:FindFirstChild("Seat")
 	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
-	local defaultSeat = SeatModels:FindFirstChild("Default")
-	local seatClone = defaultSeat:Clone()
+	local equippedChairName = DataManager:GetEquippedChair(player)
+	local seatModel = SeatModels:FindFirstChild(equippedChairName) or SeatModels:FindFirstChild("Default")
+	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
 	seatClone.Parent = seatFolder

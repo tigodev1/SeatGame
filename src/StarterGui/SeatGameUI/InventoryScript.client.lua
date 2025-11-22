@@ -37,6 +37,7 @@ local clickSound = soundsFolder:WaitForChild("Click")
 local rollSound = soundsFolder:WaitForChild("Roll")
 local rngModule = require(seatGame.Modules.RNGModule)
 local spinModule = require(script:WaitForChild("SpinModule"))
+local dataRemote = seatGame:WaitForChild("DataRemote")
 
 --// Variables
 local isInventoryOpen = false
@@ -125,7 +126,7 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	end
 end
 
-local function createChairDisplay(chairModel)
+local function createChairDisplay(chairModel, isOwned)
 	local template = chairTemplate:Clone()
 	template.Visible = true
 
@@ -134,6 +135,13 @@ local function createChairDisplay(chairModel)
 
 	if viewport then
 		setupChairInViewport(viewport, chairModel, true)
+
+		if not isOwned then
+			local colorCorrection = Instance.new("ColorCorrectionEffect")
+			colorCorrection.Saturation = -1
+			colorCorrection.Brightness = -0.5
+			colorCorrection.Parent = viewport
+		end
 	end
 
 	if nameLabel then
@@ -174,9 +182,12 @@ local function populateInventory()
 		end
 	end
 
+	local ownedChairs = dataRemote:InvokeServer("GetOwnedChairs")
+
 	for _, chairModel in seatModels:GetChildren() do
 		if chairModel:IsA("Model") then
-			createChairDisplay(chairModel)
+			local isOwned = table.find(ownedChairs, chairModel.Name) ~= nil
+			createChairDisplay(chairModel, isOwned)
 		end
 	end
 end
