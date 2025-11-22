@@ -11,279 +11,241 @@ task.spawn(function()
 	end)
 end)
 
---// Instances
-local screenGui = script.Parent
-local canvas = screenGui:WaitForChild("Canvas")
-local buttonContainer = canvas:WaitForChild("ButtonContainer")
-local inventoryButton = buttonContainer:WaitForChild("InventoryButton")
-local spinButton = buttonContainer:WaitForChild("SpinButton")
-local inventoryFrame = canvas:WaitForChild("Inventory")
-local inventoryCloseButton = inventoryFrame:WaitForChild("CloseButton")
-local spinningFrame = canvas:WaitForChild("SpinningFrame")
-local spinningCloseButton = spinningFrame:WaitForChild("CloseButton")
-local spinContainer = spinningFrame:WaitForChild("SpinContainer")
+--// UI
+local gui = script.Parent
+local canvas = gui:WaitForChild("Canvas")
+local buttons = canvas:WaitForChild("ButtonContainer")
+local invButton = buttons:WaitForChild("InventoryButton")
+local spinButton = buttons:WaitForChild("SpinButton")
+local invFrame = canvas:WaitForChild("Inventory")
+local invClose = invFrame:WaitForChild("CloseButton")
+local spinFrame = canvas:WaitForChild("SpinningFrame")
+local spinClose = spinFrame:WaitForChild("CloseButton")
+local spinContainer = spinFrame:WaitForChild("SpinContainer")
 local spinList = spinContainer:WaitForChild("List")
 local picker = spinContainer:WaitForChild("Picker")
-local spinActionButton = spinningFrame:WaitForChild("Spin")
-local list = inventoryFrame:WaitForChild("List")
+local spinAction = spinFrame:WaitForChild("Spin")
+local invList = invFrame:WaitForChild("List")
 local chairTemplate = script:WaitForChild("ChairTemplate")
 local spinTemplate = script:WaitForChild("SpinTemplate")
 
-local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
-local seatModels = seatGame:WaitForChild("SeatModels")
-local soundsFolder = seatGame:WaitForChild("Sounds")
-local hoverSound = soundsFolder:WaitForChild("Hover")
-local clickSound = soundsFolder:WaitForChild("Click")
-local rollSound = soundsFolder:WaitForChild("Roll")
-local rewardSound = soundsFolder:WaitForChild("Reward")
-local rngModule = require(seatGame.Modules.RNGModule)
-local spinModule = require(script:WaitForChild("SpinModule"))
-local dataRemote = seatGame:WaitForChild("DataRemote")
+--// Game
+local game = ReplicatedStorage:WaitForChild("SeatGame")
+local seats = game:WaitForChild("SeatModels")
+local sounds = game:WaitForChild("Sounds")
+local hoverSound = sounds:WaitForChild("Hover")
+local clickSound = sounds:WaitForChild("Click")
+local rollSound = sounds:WaitForChild("Roll")
+local rewardSound = sounds:WaitForChild("Reward")
+local rng = require(game.Modules.RNGModule)
+local spin = require(script:WaitForChild("SpinModule"))
+local data = game:WaitForChild("DataRemote")
 
---// Config
-local BUTTON_TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local BUTTON_CLICK_INFO = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
---// Variables
-local isInventoryOpen = false
+--// State
+local invOpen = false
 local buttonSizes = {}
 
---// Utility Functions
+--// Utils
 local function playSound(sound)
-	local clone = sound:Clone()
-	clone.Parent = SoundService
-	clone:Play()
-	task.delay(sound.TimeLength, function()
-		clone:Destroy()
-	end)
+	local s = sound:Clone()
+	s.Parent = SoundService
+	s:Play()
+	task.delay(sound.TimeLength, function() s:Destroy() end)
 end
 
-local function scaleUDim2(udim2, scale)
-	return UDim2.new(
-		udim2.X.Scale * scale,
-		udim2.X.Offset * scale,
-		udim2.Y.Scale * scale,
-		udim2.Y.Offset * scale
-	)
+local function scale(udim, s)
+	return UDim2.new(udim.X.Scale * s, udim.X.Offset * s, udim.Y.Scale * s, udim.Y.Offset * s)
 end
 
-local function showFrame(frame)
+local function show(frame)
 	frame.Visible = true
 end
 
-local function hideFrame(frame, callback)
+local function hide(frame)
 	frame.Visible = false
-	if callback then callback() end
 end
 
---// Button Animation Setup
-local function setupButtonAnimation(button)
-	buttonSizes[button] = button.Size
+--// Button Animations
+local function setupButton(btn)
+	buttonSizes[btn] = btn.Size
+	local info = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-	button.MouseEnter:Connect(function()
-		if button.Active then
+	btn.MouseEnter:Connect(function()
+		if btn.Active then
 			playSound(hoverSound)
-			TweenService:Create(button, BUTTON_TWEEN_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 1.06)
-			}):Play()
+			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
 		end
 	end)
 
-	button.MouseLeave:Connect(function()
-		TweenService:Create(button, BUTTON_TWEEN_INFO, {
-			Size = buttonSizes[button]
-		}):Play()
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, info, {Size = buttonSizes[btn]}):Play()
 	end)
 
-	button.MouseButton1Down:Connect(function()
-		if button.Active then
-			TweenService:Create(button, BUTTON_CLICK_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 0.94)
-			}):Play()
+	btn.MouseButton1Down:Connect(function()
+		if btn.Active then
+			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 0.95)}):Play()
 		end
 	end)
 
-	button.MouseButton1Up:Connect(function()
-		if button.Active then
-			TweenService:Create(button, BUTTON_CLICK_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 1.06)
-			}):Play()
+	btn.MouseButton1Up:Connect(function()
+		if btn.Active then
+			TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
 		end
 	end)
 end
 
---// Viewport Functions
-local function createViewportCamera(viewport)
-	local camera = Instance.new("Camera")
-	camera.Parent = viewport
-	viewport.CurrentCamera = camera
-	return camera
+--// Viewport
+local function createCamera(vp)
+	local cam = Instance.new("Camera")
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	return cam
 end
 
-local function setupChairInViewport(viewport, chairModel, rotating, isOwned)
-	local camera = createViewportCamera(viewport)
-	local clone = chairModel:Clone()
-	clone.Parent = viewport
+local function setupViewport(vp, model, rotate, owned)
+	local cam = createCamera(vp)
+	local clone = model:Clone()
+	clone.Parent = vp
 
-	if isOwned == false then
-		for _, descendant in clone:GetDescendants() do
-			if descendant:IsA("BasePart") or descendant:IsA("MeshPart") then
-				descendant.Color = Color3.fromRGB(20, 20, 20)
+	if not owned then
+		for _, part in clone:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.Color = Color3.fromRGB(20, 20, 20)
 			end
 		end
 	end
 
-	local cframe, size = clone:GetBoundingBox()
-	local distance = math.max(size.X, size.Y, size.Z) * 1.0
+	local cf, size = clone:GetBoundingBox()
+	local dist = math.max(size.X, size.Y, size.Z) * 1.0
+	cam.CFrame = CFrame.new(cf.Position + Vector3.new(dist, dist * 0.3, dist))
+	cam.CFrame = CFrame.lookAt(cam.CFrame.Position, cf.Position)
 
-	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance * 0.3, distance))
-	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
-
-	if rotating then
+	if rotate then
 		local angle = 0
 		RunService.RenderStepped:Connect(function(dt)
 			if clone and clone.Parent then
 				angle = angle + (dt * 50)
-				local rotatedCFrame = CFrame.new(cframe.Position) * CFrame.Angles(0, math.rad(angle), 0)
-				clone:PivotTo(rotatedCFrame)
+				clone:PivotTo(CFrame.new(cf.Position) * CFrame.Angles(0, math.rad(angle), 0))
 			end
 		end)
 	end
 end
 
---// Display Creation
-local function createChairDisplay(chairModel, isOwned)
-	local template = chairTemplate:Clone()
-	template.Visible = true
+--// Displays
+local function createChair(model, owned)
+	local item = chairTemplate:Clone()
+	item.Visible = true
 
-	local viewport = template:FindFirstChild("ViewportFrame")
-	local nameLabel = template:FindFirstChild("Name")
+	local vp = item:FindFirstChild("ViewportFrame")
+	if vp then setupViewport(vp, model, true, owned) end
 
-	if viewport then
-		setupChairInViewport(viewport, chairModel, true, isOwned)
-	end
+	local name = item:FindFirstChild("Name")
+	if name then name.Text = model.Name end
 
-	if nameLabel then
-		nameLabel.Text = chairModel.Name
-	end
-
-	template.Parent = list
+	item.Parent = invList
 end
 
-local function createSpinDisplay(chairModel, rngMod)
-	local template = spinTemplate:Clone()
-	template.Visible = true
+local function createSpin(model, rngMod)
+	local item = spinTemplate:Clone()
+	item.Visible = true
 
-	local viewport = template:FindFirstChild("ViewportFrame")
-	local nameLabel = template:FindFirstChild("Name")
-	local rarityFrame = template:FindFirstChild("Rarity")
+	local vp = item:FindFirstChild("ViewportFrame")
+	if vp then setupViewport(vp, model, false, true) end
 
-	if viewport then
-		setupChairInViewport(viewport, chairModel, false, true)
+	local name = item:FindFirstChild("Name")
+	if name then name.Text = model.Name end
+
+	local rarity = item:FindFirstChild("Rarity")
+	if rarity then
+		local r = rngMod:GetSeatRarity(model)
+		rarity.BackgroundColor3 = rngMod:GetRarityColor(r)
 	end
 
-	if nameLabel then
-		nameLabel.Text = chairModel.Name
-	end
-
-	if rarityFrame then
-		local rarity = rngMod:GetSeatRarity(chairModel)
-		rarityFrame.BackgroundColor3 = rngMod:GetRarityColor(rarity)
-	end
-
-	return template
+	return item
 end
 
---// Inventory Functions
-local function populateInventory()
-	for _, child in list:GetChildren() do
+--// Inventory
+local function updateInventory()
+	for _, child in invList:GetChildren() do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
 
-	local ownedChairs = dataRemote:InvokeServer("GetOwnedChairs")
+	local owned = data:InvokeServer("GetOwnedChairs")
 
-	for _, chairModel in seatModels:GetChildren() do
-		if chairModel:IsA("Model") then
-			local isOwned = table.find(ownedChairs, chairModel.Name) ~= nil
-			createChairDisplay(chairModel, isOwned)
+	for _, model in seats:GetChildren() do
+		if model:IsA("Model") then
+			local has = table.find(owned, model.Name) ~= nil
+			createChair(model, has)
 		end
 	end
 end
 
---// UI Control Functions
-local function closeInventory()
-	isInventoryOpen = false
-	hideFrame(inventoryFrame)
+--// UI Control
+local function closeInv()
+	invOpen = false
+	hide(invFrame)
 end
 
-local function closeSpinning()
-	hideFrame(spinningFrame)
-end
-
-local function toggleInventory()
+local function toggleInv()
 	playSound(clickSound)
-	isInventoryOpen = not isInventoryOpen
+	invOpen = not invOpen
 
-	if isInventoryOpen then
-		showFrame(inventoryFrame)
-		populateInventory()
-		if spinningFrame.Visible then
-			hideFrame(spinningFrame)
-		end
+	if invOpen then
+		show(invFrame)
+		updateInventory()
+		if spinFrame.Visible then hide(spinFrame) end
 	else
-		hideFrame(inventoryFrame)
+		hide(invFrame)
 	end
 end
 
-local function toggleSpinning()
+local function toggleSpin()
 	playSound(clickSound)
-	local wasVisible = spinningFrame.Visible
+	local vis = spinFrame.Visible
 
-	if not wasVisible then
-		showFrame(spinningFrame)
-		if inventoryFrame.Visible then
-			hideFrame(inventoryFrame)
-		end
+	if not vis then
+		show(spinFrame)
+		if invFrame.Visible then hide(invFrame) end
 	else
-		hideFrame(spinningFrame)
+		hide(spinFrame)
 	end
 end
 
---// Initialize
-inventoryFrame.Visible = false
-spinningFrame.Visible = false
+--// Setup
+invFrame.Visible = false
+spinFrame.Visible = false
 
-setupButtonAnimation(inventoryButton)
-setupButtonAnimation(spinButton)
-setupButtonAnimation(spinActionButton)
-setupButtonAnimation(inventoryCloseButton)
-setupButtonAnimation(spinningCloseButton)
+setupButton(invButton)
+setupButton(spinButton)
+setupButton(spinAction)
+setupButton(invClose)
+setupButton(spinClose)
 
-inventoryButton.MouseButton1Click:Connect(toggleInventory)
-spinButton.MouseButton1Click:Connect(toggleSpinning)
-inventoryCloseButton.MouseButton1Click:Connect(function()
+invButton.MouseButton1Click:Connect(toggleInv)
+spinButton.MouseButton1Click:Connect(toggleSpin)
+invClose.MouseButton1Click:Connect(function()
 	playSound(clickSound)
-	closeInventory()
+	closeInv()
 end)
-spinningCloseButton.MouseButton1Click:Connect(function()
+spinClose.MouseButton1Click:Connect(function()
 	playSound(clickSound)
-	closeSpinning()
+	hide(spinFrame)
 end)
 
---// Initialize Spin Module
-spinModule:Init({
+--// Init Spin
+spin:Init({
 	spinList = spinList,
 	spinContainer = spinContainer,
 	picker = picker,
-	spinButton = spinActionButton,
-	models = seatModels:GetChildren(),
+	spinButton = spinAction,
+	models = seats:GetChildren(),
 	rollSound = rollSound,
 	rewardSound = rewardSound,
-	rngModule = rngModule,
-	createDisplayFunc = createSpinDisplay,
-	dataRemote = dataRemote
+	rngModule = rng,
+	createDisplayFunc = createSpin,
+	dataRemote = data
 })
 
-print("[InventoryScript] Initialized successfully")
+print("[UI] Ready")
