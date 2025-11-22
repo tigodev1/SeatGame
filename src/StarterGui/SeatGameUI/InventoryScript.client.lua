@@ -210,10 +210,15 @@ updateInventory = function()
 
 	-- Sort chairs: equipped first, then by name
 	local chairList = {}
-	for _, model in seats:GetChildren() do
-		if model:IsA("Model") then
-			local has = table.find(owned, model.Name) ~= nil
-			table.insert(chairList, {model = model, owned = has})
+	-- Iterate through all rarity folders to get all chair models
+	for _, folder in seats:GetChildren() do
+		if folder:IsA("Folder") then
+			for _, model in folder:GetChildren() do
+				if model:IsA("Model") then
+					local has = table.find(owned, model.Name) ~= nil
+					table.insert(chairList, {model = model, owned = has})
+				end
+			end
 		end
 	end
 

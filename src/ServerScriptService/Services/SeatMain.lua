@@ -16,6 +16,19 @@ local DataManager = require(script.DataManager)
 local SeatMain = {}
 
 --// Functions
+local function findChairModel(chairName)
+	-- Search through all rarity folders to find the chair
+	for _, folder in ipairs(SeatModels:GetChildren()) do
+		if folder:IsA("Folder") then
+			local model = folder:FindFirstChild(chairName)
+			if model and model:IsA("Model") then
+				return model
+			end
+		end
+	end
+	return nil
+end
+
 local function findPlayerSeatPosition(player)
 	for _, position in ipairs(SeatsPlacing:GetChildren()) do
 		local important = position:FindFirstChild("Important")
@@ -52,7 +65,7 @@ local function createSeatAtPosition(seatPosition, player)
 	local seatFolder = seatPosition:FindFirstChild("Seat")
 	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
 	local equippedChairName = DataManager:GetEquippedChair(player)
-	local seatModel = SeatModels:FindFirstChild(equippedChairName) or SeatModels:FindFirstChild("Default")
+	local seatModel = findChairModel(equippedChairName) or findChairModel("Default")
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
@@ -169,7 +182,7 @@ function SeatMain:SwapPlayerChair(player)
 
 	-- Create new chair with equipped model
 	local equippedChairName = DataManager:GetEquippedChair(player)
-	local seatModel = SeatModels:FindFirstChild(equippedChairName) or SeatModels:FindFirstChild("Default")
+	local seatModel = findChairModel(equippedChairName) or findChairModel("Default")
 	local seatClone = seatModel:Clone()
 	local seatPart = seatClone:FindFirstChild("Seat")
 
@@ -233,9 +246,21 @@ for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(onPlayerAdded, player)
 end
 
+-- Count total chair models across all rarity folders
+local totalModels = 0
+for _, folder in ipairs(SeatModels:GetChildren()) do
+	if folder:IsA("Folder") then
+		for _, model in ipairs(folder:GetChildren()) do
+			if model:IsA("Model") then
+				totalModels = totalModels + 1
+			end
+		end
+	end
+end
+
 print("✓ SeatMain Initialized", {
 	SeatPositions = #SeatsPlacing:GetChildren(),
-	SeatModels = #SeatModels:GetChildren(),
+	SeatModels = totalModels,
 	AutoSeating = "Enabled"
 })
 

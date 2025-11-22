@@ -171,15 +171,21 @@ local function onPlayerAdded(player)
 
 		local seatModels = SeatGame:FindFirstChild("SeatModels")
 		if seatModels then
-			for _, seatModel in seatModels:GetChildren() do
-				if seatModel:IsA("Model") then
-					if profile.Data.OwnedChairs[seatModel.Name] == nil then
-						profile.Data.OwnedChairs[seatModel.Name] = false
+			-- Iterate through all rarity folders (Common, Rare, Legendary, Miscellaneous)
+			for _, folder in ipairs(seatModels:GetChildren()) do
+				if folder:IsA("Folder") then
+					for _, seatModel in ipairs(folder:GetChildren()) do
+						if seatModel:IsA("Model") then
+							if profile.Data.OwnedChairs[seatModel.Name] == nil then
+								profile.Data.OwnedChairs[seatModel.Name] = false
+							end
+						end
 					end
 				end
 			end
 		end
 
+		-- Default chair is owned by everyone
 		if profile.Data.OwnedChairs["Default"] == nil then
 			profile.Data.OwnedChairs["Default"] = true
 		end

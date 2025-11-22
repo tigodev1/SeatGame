@@ -21,29 +21,45 @@ RNGModule.RarityColors = {
 function RNGModule:GetSeatModels()
 	local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
 	local seatModels = seatGame:WaitForChild("SeatModels")
-	return seatModels:GetChildren()
+	local allModels = {}
+
+	-- Get all models from rarity folders (exclude Miscellaneous)
+	for _, folder in ipairs(seatModels:GetChildren()) do
+		if folder:IsA("Folder") and folder.Name ~= "Miscellaneous" then
+			for _, model in ipairs(folder:GetChildren()) do
+				if model:IsA("Model") then
+					table.insert(allModels, model)
+				end
+			end
+		end
+	end
+
+	return allModels
 end
 
 function RNGModule:GetSeatRarity(seatModel)
-	local important = seatModel:FindFirstChild("Important")
-	if not important then return "Common" end
-
-	local rarity = important:FindFirstChild("Rarity")
-	if not rarity then return "Common" end
-
-	return rarity.Value
+	-- Rarity is determined by parent folder name
+	local parent = seatModel.Parent
+	if parent and parent:IsA("Folder") then
+		local rarityName = parent.Name
+		if self.RarityWeights[rarityName] then
+			return rarityName
+		end
+	end
+	return "Common"
 end
 
 function RNGModule:GetSeatsByRarity(rarityName)
-	local seats = {}
-	local models = self:GetSeatModels()
+	local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
+	local seatModels = seatGame:WaitForChild("SeatModels")
+	local rarityFolder = seatModels:FindFirstChild(rarityName)
 
-	for _, model in ipairs(models) do
+	if not rarityFolder then return {} end
+
+	local seats = {}
+	for _, model in ipairs(rarityFolder:GetChildren()) do
 		if model:IsA("Model") then
-			local rarity = self:GetSeatRarity(model)
-			if rarity == rarityName then
-				table.insert(seats, model)
-			end
+			table.insert(seats, model)
 		end
 	end
 
