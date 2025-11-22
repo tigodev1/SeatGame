@@ -86,6 +86,10 @@ local function setupPlayerControls(player: Player, seatPart: Seat)
 	humanoid.JumpPower = 0
 	humanoid.JumpHeight = 0
 
+	humanoid.Died:Connect(function()
+		humanoid.Health = humanoid.MaxHealth
+	end)
+
 	local connection: RBXScriptConnection
 	connection = humanoid.StateChanged:Connect(function(oldState, newState)
 		if newState ~= Enum.HumanoidStateType.Seated then
