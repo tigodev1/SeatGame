@@ -49,9 +49,10 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	clone.Parent = viewport
 
 	local cframe, size = clone:GetBoundingBox()
-	local distance = 7
+	local maxSize = math.max(size.X, size.Y, size.Z)
+	local distance = maxSize * 1.8
 
-	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance/3, distance))
+	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance * 0.4, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
 
 	if rotating then
