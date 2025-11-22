@@ -41,15 +41,12 @@ local spinModule = require(script:WaitForChild("SpinModule"))
 local dataRemote = seatGame:WaitForChild("DataRemote")
 
 --// Config
-local IDLE_SCROLL_SPEED = 18
 local BUTTON_TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local BUTTON_CLICK_INFO = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 --// Variables
 local isInventoryOpen = false
-local isSpinLocked = false
 local buttonSizes = {}
-local idleRollConnection = nil
 
 --// Utility Functions
 local function playSound(sound)
@@ -215,124 +212,6 @@ local function populateInventory()
 	end
 end
 
---// Spin Functions
-local function populateSpinList()
-	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") then
-			child:Destroy()
-		end
-	end
-
-	local models = seatModels:GetChildren()
-	local selectedSeats = {}
-
-	for i = 1, 10 do
-		selectedSeats[i] = models[math.random(1, #models)]
-	end
-
-	for loop = 1, 4 do
-		for _, model in ipairs(selectedSeats) do
-			local display = createSpinDisplay(model, rngModule)
-			display.Parent = spinList
-		end
-		if loop < 4 then
-			task.wait()
-		end
-	end
-
-	spinList.CanvasPosition = Vector2.new(0, 0)
-end
-
-local function startIdleRoll()
-	if idleRollConnection then return end
-
-	idleRollConnection = RunService.Heartbeat:Connect(function(dt)
-		if not spinModule:IsSpinning() and spinList then
-			local maxScroll = spinList.AbsoluteCanvasSize.X - spinContainer.AbsoluteSize.X
-			if maxScroll > 0 then
-				local newPosition = spinList.CanvasPosition.X + (IDLE_SCROLL_SPEED * dt)
-				if newPosition > maxScroll then
-					newPosition = newPosition % maxScroll
-				end
-				spinList.CanvasPosition = Vector2.new(newPosition, 0)
-			end
-		end
-	end)
-end
-
-local function stopIdleRoll()
-	if idleRollConnection then
-		idleRollConnection:Disconnect()
-		idleRollConnection = nil
-	end
-end
-
-local function performSpin()
-	-- IMMEDIATE lock check - first line
-	if isSpinLocked then
-		warn("[Client] Spin locked!")
-		return
-	end
-
-	-- Lock IMMEDIATELY before any other operations
-	isSpinLocked = true
-
-	-- Additional checks
-	if spinModule:IsSpinning() then
-		warn("[Client] Module reports spinning!")
-		isSpinLocked = false
-		return
-	end
-
-	if not spinActionButton.Active then
-		warn("[Client] Button not active!")
-		isSpinLocked = false
-		return
-	end
-
-	stopIdleRoll()
-	playSound(clickSound)
-
-	spinActionButton.Active = false
-	spinActionButton.Text = "SPINNING..."
-	spinActionButton.BackgroundTransparency = 0.5
-
-	local models = seatModels:GetChildren()
-
-	-- StartSpin will handle its own locking internally
-	local success = spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
-		-- Play reward sound immediately
-		playSound(rewardSound)
-
-		-- Unlock chair in background
-		if wonSeatName then
-			task.spawn(function()
-				dataRemote:InvokeServer("UnlockChair", wonSeatName)
-			end)
-		end
-
-		-- Re-enable button immediately
-		spinActionButton.Active = true
-		spinActionButton.Text = "SPIN"
-		spinActionButton.BackgroundTransparency = 0
-
-		-- Unlock spin immediately
-		isSpinLocked = false
-
-		-- Resume idle
-		startIdleRoll()
-	end)
-
-	-- If StartSpin failed, unlock immediately
-	if not success then
-		spinActionButton.Active = true
-		spinActionButton.Text = "SPIN"
-		spinActionButton.BackgroundTransparency = 0
-		isSpinLocked = false
-		startIdleRoll()
-	end
-end
-
 --// UI Control Functions
 local function closeInventory()
 	isInventoryOpen = false
@@ -340,9 +219,7 @@ local function closeInventory()
 end
 
 local function closeSpinning()
-	hideFrame(spinningFrame, function()
-		stopIdleRoll()
-	end)
+	hideFrame(spinningFrame)
 end
 
 local function toggleInventory()
@@ -366,15 +243,11 @@ local function toggleSpinning()
 
 	if not wasVisible then
 		showFrame(spinningFrame)
-		populateSpinList()
-		startIdleRoll()
 		if inventoryFrame.Visible then
 			hideFrame(inventoryFrame)
 		end
 	else
-		hideFrame(spinningFrame, function()
-			stopIdleRoll()
-		end)
+		hideFrame(spinningFrame)
 	end
 end
 
@@ -390,7 +263,6 @@ setupButtonAnimation(spinningCloseButton)
 
 inventoryButton.MouseButton1Click:Connect(toggleInventory)
 spinButton.MouseButton1Click:Connect(toggleSpinning)
-spinActionButton.MouseButton1Click:Connect(performSpin)
 inventoryCloseButton.MouseButton1Click:Connect(function()
 	playSound(clickSound)
 	closeInventory()
@@ -399,3 +271,19 @@ spinningCloseButton.MouseButton1Click:Connect(function()
 	playSound(clickSound)
 	closeSpinning()
 end)
+
+--// Initialize Spin Module
+spinModule:Init({
+	spinList = spinList,
+	spinContainer = spinContainer,
+	picker = picker,
+	spinButton = spinActionButton,
+	models = seatModels:GetChildren(),
+	rollSound = rollSound,
+	rewardSound = rewardSound,
+	rngModule = rngModule,
+	createDisplayFunc = createSpinDisplay,
+	dataRemote = dataRemote
+})
+
+print("[InventoryScript] Initialized successfully")
