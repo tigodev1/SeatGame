@@ -125,15 +125,15 @@ local function populateSpinList()
 
 	local models = seatModels:GetChildren()
 
-	for loop = 1, 5 do
-		for i = 1, 10 do
-			local randomModel = models[math.random(1, #models)]
-			local display = createSpinDisplay(randomModel)
-			display.Parent = spinList
-		end
+	for i = 1, 10 do
+		local randomModel = models[math.random(1, #models)]
+		local display = createSpinDisplay(randomModel)
+		display.Parent = spinList
+		print("Created seat", i, randomModel.Name)
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
+	print("Total seats in list:", #spinList:GetChildren())
 end
 
 local function getItemUnderPicker()
@@ -158,12 +158,15 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(0.2)
+	task.wait(0.5)
 
-	local duration = 4
+	local duration = 3
 	local elapsed = 0
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
-	local targetScroll = math.random(maxScroll * 0.5, maxScroll * 0.8)
+	local targetScroll = math.random(maxScroll * 0.3, maxScroll * 0.7)
+
+	print("Starting spin - Max scroll:", maxScroll, "Target:", targetScroll)
+	print("Seats visible before spin:", #spinList:GetChildren())
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
@@ -171,6 +174,8 @@ local function performSpin()
 
 		if elapsed >= duration then
 			connection:Disconnect()
+
+			print("Seats visible after spin:", #spinList:GetChildren())
 
 			local wonLabel = getItemUnderPicker()
 			if wonLabel then
@@ -183,7 +188,7 @@ local function performSpin()
 		end
 
 		local progress = elapsed / duration
-		local eased = 1 - math.pow(1 - progress, 4)
+		local eased = 1 - math.pow(1 - progress, 3)
 		local currentScroll = eased * targetScroll
 
 		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
