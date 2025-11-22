@@ -152,28 +152,43 @@ local function createChair(model, owned)
 	local name = item:FindFirstChild("Name")
 	if name then name.Text = model.Name end
 
-	-- Setup equip button
+	-- Show rarity border (only if owned)
+	local rarity = item:FindFirstChild("Rarity")
+	if rarity and owned then
+		local r = rng:GetSeatRarity(model)
+		rarity.BackgroundColor3 = rng:GetRarityColor(r)
+	elseif rarity then
+		-- Locked chairs have gray border
+		rarity.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	end
+
+	-- Setup equip button (show for all chairs, but only clickable if owned)
 	local equipBtn = item:FindFirstChild("Equip")
-	if equipBtn and owned then
-		local isEquipped = equippedChair == model.Name
+	if equipBtn then
+		if owned then
+			local isEquipped = equippedChair == model.Name
 
-		equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
-		equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
-		equipBtn.Visible = true
+			equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
+			equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
+			equipBtn.Visible = true
 
-		setupButton(equipBtn)
+			setupButton(equipBtn)
 
-		equipBtn.MouseButton1Click:Connect(function()
-			playSound(clickSound)
+			equipBtn.MouseButton1Click:Connect(function()
+				playSound(clickSound)
 
-			if equippedChair == model.Name then
-				unequipChair()
-			else
-				equipChair(model.Name)
-			end
-		end)
-	elseif equipBtn then
-		equipBtn.Visible = false
+				if equippedChair == model.Name then
+					unequipChair()
+				else
+					equipChair(model.Name)
+				end
+			end)
+		else
+			-- Show locked button
+			equipBtn.Text = "LOCKED"
+			equipBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+			equipBtn.Visible = true
+		end
 	end
 
 	item.Parent = invList
@@ -215,7 +230,18 @@ updateInventory = function()
 		equippedChair = result
 	end
 
-	local owned = DataService:GetOwnedChairs()
+	-- Get owned chairs list
+	local owned = {}
+	local ownedSuccess, ownedResult = pcall(function()
+		return DataService:GetOwnedChairs()
+	end)
+
+	if ownedSuccess and ownedResult then
+		owned = ownedResult
+	else
+		warn("Failed to get owned chairs:", ownedResult)
+		owned = {"Default"} -- Fallback to just Default
+	end
 
 	-- Sort chairs: equipped first, then by name
 	local chairList = {}
