@@ -270,7 +270,14 @@ local function performSpin()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 	task.wait(0.1)
 
-	local firstItem = spinList:FindFirstChild("SpinItem_1")
+	local firstItem = nil
+	for _, child in spinList:GetChildren() do
+		if child:IsA("GuiObject") then
+			firstItem = child
+			break
+		end
+	end
+
 	if not firstItem then
 		isSpinning = false
 		startIdleRoll()
