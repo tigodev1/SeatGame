@@ -45,9 +45,9 @@ local rollSoundInstance = nil
 local idleRollConnection = nil
 
 --// Config
-local SPIN_DURATION = 5
-local FAST_DURATION = 3.0
-local SLOW_DURATION = 2.0
+local SPIN_DURATION = 7
+local FAST_DURATION = 3
+local SLOW_DURATION = SPIN_DURATION - FAST_DURATION
 local IDLE_SCROLL_SPEED = 15
 
 --// Sound System
@@ -348,7 +348,7 @@ local function performSpin()
 
 		if elapsed < FAST_DURATION then
 			local linearProgress = elapsed / FAST_DURATION
-			scrollProgress = linearProgress * 0.6
+			scrollProgress = linearProgress * 0.5
 
 			if rollSoundInstance then
 				rollSoundInstance.PlaybackSpeed = 2.0
@@ -356,12 +356,12 @@ local function performSpin()
 		else
 			local slowdownElapsed = elapsed - FAST_DURATION
 			local slowdownProgress = slowdownElapsed / SLOW_DURATION
-			local slowdownEase = 1 - math.pow(1 - slowdownProgress, 3)
-			scrollProgress = 0.6 + (slowdownEase * 0.4)
+			local slowdownEase = 1 - math.pow(1 - slowdownProgress, 2)
+			scrollProgress = 0.5 + (slowdownEase * 0.5)
 
 			if rollSoundInstance then
-				local velocity = 3 * math.pow(1 - slowdownProgress, 2)
-				local speed = 0.2 + (velocity * 0.6)
+				local velocity = 2 * (1 - slowdownProgress)
+				local speed = 0.2 + (velocity * 0.9)
 				rollSoundInstance.PlaybackSpeed = speed
 			end
 		end
