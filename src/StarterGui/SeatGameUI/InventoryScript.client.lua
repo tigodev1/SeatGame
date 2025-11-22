@@ -31,7 +31,7 @@ local function setupChairInViewport(viewport, chairModel)
 	clone.Parent = viewport
 
 	local cframe, size = clone:GetBoundingBox()
-	local distance = 6
+	local distance = 5
 
 	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance/3, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
