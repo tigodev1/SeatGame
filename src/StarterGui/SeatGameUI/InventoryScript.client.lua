@@ -254,7 +254,7 @@ local function performSpin()
 
 	local models = seatModels:GetChildren()
 	local itemsPerSet = 50
-	local numberOfSets = 3
+	local numberOfSets = 6
 
 	for i = 1, itemsPerSet * numberOfSets do
 		local randomModel = models[math.random(1, #models)]
@@ -288,7 +288,7 @@ local function performSpin()
 
 	local itemWidth = firstItem.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetIndex = math.random(110, 130)
+	local targetIndex = math.random(250, 270)
 	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
 	local targetScroll = targetPosition
 
