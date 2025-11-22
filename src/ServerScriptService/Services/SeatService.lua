@@ -80,71 +80,65 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
-	-- Setup all parts in the chair
+	-- Configure all parts in the chair
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Anchored = false
 			part.CanCollide = false
 			part.Massless = true
 			part.CollisionGroup = "PlayerChair"
-
-			-- Set network ownership to prevent shaking
 			pcall(function()
 				part:SetNetworkOwner(player)
 			end)
 		end
 	end
 
-	-- Disable jumping from unseating
-	if seatPart:IsA("Seat") then
-		seatPart.Disabled = false
-	end
-
-	-- Weld all chair parts to the AnchorPart FIRST
+	-- Weld all chair parts to AnchorPart
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") and part ~= anchorPart then
-			local partWeld = Instance.new("WeldConstraint")
-			partWeld.Part0 = anchorPart
-			partWeld.Part1 = part
-			partWeld.Parent = part
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = anchorPart
+			weld.Part1 = part
+			weld.Parent = part
 		end
 	end
 
-	-- Raycast to find ground under player
-	local playerPosition = humanoidRootPart.Position
-	local rayOrigin = playerPosition + Vector3.new(0, 5, 0)
-	local rayDirection = Vector3.new(0, -100, 0)
-
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	raycastParams.FilterDescendantsInstances = {character, chairClone}
-
-	local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-	local groundY = raycastResult and raycastResult.Position.Y or (playerPosition.Y - 3)
-
-	-- Position AnchorPart on the ground at player X,Z
-	local anchorPosition = Vector3.new(playerPosition.X, groundY, playerPosition.Z)
-	-- Keep the player's facing direction
-	local lookDirection = humanoidRootPart.CFrame.LookVector
-	local anchorCFrame = CFrame.new(anchorPosition) * CFrame.Angles(0, math.atan2(lookDirection.X, lookDirection.Z), 0)
-	anchorPart.CFrame = anchorCFrame
-
-	-- Parent chair to workspace so it's positioned correctly
+	-- Parent chair to workspace
 	chairClone.Parent = Workspace
 
-	-- Weld AnchorPart to player's HumanoidRootPart so chair follows movement
-	local anchorWeld = Instance.new("Weld")
-	anchorWeld.Name = "ChairToPlayerWeld"
-	anchorWeld.Part0 = humanoidRootPart
-	anchorWeld.Part1 = anchorPart
-	-- Calculate the offset from player to anchor
-	anchorWeld.C0 = humanoidRootPart.CFrame:ToObjectSpace(anchorPart.CFrame)
-	anchorWeld.C1 = CFrame.new(0, 0, 0)
-	anchorWeld.Parent = anchorPart
+	-- Find ground position under player
+	local playerPos = humanoidRootPart.Position
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.FilterDescendantsInstances = {character, chairClone}
 
-	-- Now teleport player to Seat position to sit them on the seat
-	task.wait(0.1)
+	local rayResult = Workspace:Raycast(playerPos + Vector3.new(0, 5, 0), Vector3.new(0, -100, 0), rayParams)
+	local groundY = rayResult and rayResult.Position.Y or (playerPos.Y - 3)
+
+	-- Get player's facing direction
+	local lookVec = humanoidRootPart.CFrame.LookVector
+	local rotation = math.atan2(lookVec.X, lookVec.Z)
+
+	-- Position AnchorPart on ground at player's X,Z
+	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
+
+	-- Wait a frame for physics to settle
+	task.wait()
+
+	-- Teleport player to Seat to sit them down
 	humanoidRootPart.CFrame = seatPart.CFrame
+
+	-- Wait for player to be seated
+	task.wait(0.1)
+
+	-- NOW weld the AnchorPart to player (after they're seated)
+	local weld = Instance.new("Weld")
+	weld.Name = "ChairToPlayerWeld"
+	weld.Part0 = humanoidRootPart
+	weld.Part1 = anchorPart
+	weld.C0 = humanoidRootPart.CFrame:ToObjectSpace(anchorPart.CFrame)
+	weld.C1 = CFrame.new()
+	weld.Parent = anchorPart
 
 	-- Store reference
 	playerChairs[player] = chairClone
