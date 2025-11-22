@@ -141,6 +141,9 @@ local function attachChairToPlayer(player, chairName)
 	-- Position player at the seat's position BEFORE welding
 	humanoidRootPart.CFrame = seatPart.CFrame
 
+	-- Set humanoid to seated state immediately to prevent ragdolling
+	humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+
 	-- Wait a moment for position to settle
 	task.wait(0.05)
 
@@ -154,7 +157,7 @@ local function attachChairToPlayer(player, chairName)
 	weld.Parent = anchorPart
 
 	-- Play sitting animation
-	task.wait(0.1)
+	task.wait(0.05)
 	local sitAnim = Instance.new("Animation")
 	sitAnim.AnimationId = "rbxassetid://2506281703"
 	local sitTrack = humanoid:LoadAnimation(sitAnim)
@@ -220,7 +223,7 @@ function SeatService:KnitInit()
 	-- Setup collision group for chairs
 	local PhysicsService = game:GetService("PhysicsService")
 	pcall(function()
-		PhysicsService:CreateCollisionGroup("PlayerChair")
+		PhysicsService:RegisterCollisionGroup("PlayerChair")
 		PhysicsService:CollisionGroupSetCollidable("PlayerChair", "PlayerChair", false)
 	end)
 
