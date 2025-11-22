@@ -21,6 +21,7 @@ local DataService = nil -- Will be set in KnitStart
 
 --// State
 local playerChairs = {} -- [player] = chairModel
+local playerConnections = {} -- [player] = {connections}
 
 --// Functions
 local function findChairModel(chairName)
@@ -37,6 +38,15 @@ local function findChairModel(chairName)
 end
 
 local function removePlayerChair(player)
+	-- Disconnect any connections
+	if playerConnections[player] then
+		for _, connection in playerConnections[player] do
+			connection:Disconnect()
+		end
+		playerConnections[player] = nil
+	end
+
+	-- Destroy chair
 	local existingChair = playerChairs[player]
 	if existingChair and existingChair.Parent then
 		existingChair:Destroy()
@@ -51,10 +61,6 @@ local function attachChairToPlayer(player, chairName)
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character:FindFirstChild("Humanoid")
 	if not humanoidRootPart or not humanoid then return end
-
-	-- Jump to unseat from current chair
-	humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	task.wait(0.1)
 
 	-- Remove any existing chair
 	removePlayerChair(player)
@@ -140,8 +146,18 @@ local function attachChairToPlayer(player, chairName)
 	weld.C1 = CFrame.new()
 	weld.Parent = anchorPart
 
-	-- Store reference
+	-- Prevent jumping from unseating - monitor and re-seat if needed
+	local unseatConnection = seatPart:GetPropertyChangedSignal("Occupant"):Connect(function()
+		if not seatPart.Occupant and humanoid and humanoid.Parent then
+			-- Player got unseated, re-seat them
+			task.wait()
+			humanoidRootPart.CFrame = seatPart.CFrame
+		end
+	end)
+
+	-- Store references
 	playerChairs[player] = chairClone
+	playerConnections[player] = {unseatConnection}
 end
 
 function SeatService:SwapPlayerChair(player)
@@ -176,6 +192,7 @@ end
 local function onPlayerRemoving(player)
 	removePlayerChair(player)
 	playerChairs[player] = nil
+	playerConnections[player] = nil
 end
 
 --// Knit Lifecycle
