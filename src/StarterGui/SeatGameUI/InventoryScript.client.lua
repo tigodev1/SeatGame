@@ -41,19 +41,15 @@ local spinModule = require(script:WaitForChild("SpinModule"))
 local dataRemote = seatGame:WaitForChild("DataRemote")
 
 --// Config
-local IDLE_SCROLL_SPEED = 20
-local BUTTON_TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local BUTTON_CLICK_INFO = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local FRAME_SLIDE_INFO = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local SPIN_COOLDOWN = 0.5
+local IDLE_SCROLL_SPEED = 18
+local BUTTON_TWEEN_INFO = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BUTTON_CLICK_INFO = TweenInfo.new(0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 --// Variables
 local isInventoryOpen = false
-local canSpin = true
-local lastSpinTime = 0
+local isSpinLocked = false
 local buttonSizes = {}
 local idleRollConnection = nil
-local buttonOriginalColors = {}
 
 --// Utility Functions
 local function playSound(sound)
@@ -76,60 +72,22 @@ end
 
 local function showFrame(frame)
 	frame.Visible = true
-	frame.Position = UDim2.new(0.5, 0, 1.2, 0)
-
-	local slideIn = TweenService:Create(frame, FRAME_SLIDE_INFO, {
-		Position = UDim2.new(0.5, 0, 0.5, 0)
-	})
-	slideIn:Play()
 end
 
 local function hideFrame(frame, callback)
-	local slideOut = TweenService:Create(frame,
-		TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-		{Position = UDim2.new(0.5, 0, 1.2, 0)}
-	)
-
-	slideOut.Completed:Connect(function()
-		frame.Visible = false
-		frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-		if callback then callback() end
-	end)
-
-	slideOut:Play()
-end
-
-local function setButtonEnabled(button, enabled)
-	button.Active = enabled
-
-	local targetColor = enabled and (buttonOriginalColors[button] or Color3.fromRGB(255, 255, 255))
-		or Color3.fromRGB(100, 100, 100)
-
-	local targetTransparency = enabled and 0 or 0.5
-
-	TweenService:Create(button, TweenInfo.new(0.2), {
-		BackgroundColor3 = targetColor,
-		BackgroundTransparency = targetTransparency
-	}):Play()
-
-	local textLabel = button:FindFirstChildOfClass("TextLabel") or button:FindFirstChildOfClass("TextButton")
-	if textLabel then
-		TweenService:Create(textLabel, TweenInfo.new(0.2), {
-			TextTransparency = enabled and 0 or 0.5
-		}):Play()
-	end
+	frame.Visible = false
+	if callback then callback() end
 end
 
 --// Button Animation Setup
 local function setupButtonAnimation(button)
 	buttonSizes[button] = button.Size
-	buttonOriginalColors[button] = button.BackgroundColor3
 
 	button.MouseEnter:Connect(function()
 		if button.Active then
 			playSound(hoverSound)
 			TweenService:Create(button, BUTTON_TWEEN_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 1.08)
+				Size = scaleUDim2(buttonSizes[button], 1.06)
 			}):Play()
 		end
 	end)
@@ -143,7 +101,7 @@ local function setupButtonAnimation(button)
 	button.MouseButton1Down:Connect(function()
 		if button.Active then
 			TweenService:Create(button, BUTTON_CLICK_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 0.92)
+				Size = scaleUDim2(buttonSizes[button], 0.94)
 			}):Play()
 		end
 	end)
@@ -151,7 +109,7 @@ local function setupButtonAnimation(button)
 	button.MouseButton1Up:Connect(function()
 		if button.Active then
 			TweenService:Create(button, BUTTON_CLICK_INFO, {
-				Size = scaleUDim2(buttonSizes[button], 1.08)
+				Size = scaleUDim2(buttonSizes[button], 1.06)
 			}):Play()
 		end
 	end)
@@ -310,60 +268,69 @@ local function stopIdleRoll()
 end
 
 local function performSpin()
-	-- Multiple spam prevention checks
-	if spinModule:IsSpinning() then
-		warn("[Client] Spin already in progress (module check)")
+	-- IMMEDIATE lock check - first line
+	if isSpinLocked then
+		warn("[Client] Spin locked!")
 		return
 	end
 
-	if not canSpin then
-		warn("[Client] Spin on cooldown")
+	-- Lock IMMEDIATELY before any other operations
+	isSpinLocked = true
+
+	-- Additional checks
+	if spinModule:IsSpinning() then
+		warn("[Client] Module reports spinning!")
+		isSpinLocked = false
 		return
 	end
 
 	if not spinActionButton.Active then
-		warn("[Client] Button not active")
+		warn("[Client] Button not active!")
+		isSpinLocked = false
 		return
 	end
 
-	local currentTime = tick()
-	if currentTime - lastSpinTime < SPIN_COOLDOWN then
-		warn("[Client] Cooldown not elapsed")
-		return
-	end
-
-	-- Lock all spin controls
-	canSpin = false
-	lastSpinTime = currentTime
 	stopIdleRoll()
 	playSound(clickSound)
 
-	setButtonEnabled(spinActionButton, false)
+	spinActionButton.Active = false
 	spinActionButton.Text = "SPINNING..."
+	spinActionButton.BackgroundTransparency = 0.5
 
 	local models = seatModels:GetChildren()
 
-	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
-		task.wait(0.2)
+	-- StartSpin will handle its own locking internally
+	local success = spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
+		-- Play reward sound immediately
+		playSound(rewardSound)
 
+		-- Unlock chair in background
 		if wonSeatName then
-			playSound(rewardSound)
 			task.spawn(function()
 				dataRemote:InvokeServer("UnlockChair", wonSeatName)
 			end)
 		end
 
-		task.wait(0.3)
-
-		-- Re-enable spin controls
+		-- Re-enable button immediately
+		spinActionButton.Active = true
 		spinActionButton.Text = "SPIN"
-		setButtonEnabled(spinActionButton, true)
+		spinActionButton.BackgroundTransparency = 0
 
-		task.wait(SPIN_COOLDOWN)
-		canSpin = true
+		-- Unlock spin immediately
+		isSpinLocked = false
 
+		-- Resume idle
 		startIdleRoll()
 	end)
+
+	-- If StartSpin failed, unlock immediately
+	if not success then
+		spinActionButton.Active = true
+		spinActionButton.Text = "SPIN"
+		spinActionButton.BackgroundTransparency = 0
+		isSpinLocked = false
+		startIdleRoll()
+	end
 end
 
 --// UI Control Functions
