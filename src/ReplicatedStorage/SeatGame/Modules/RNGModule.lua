@@ -73,40 +73,36 @@ function RNGModule:GetSeatsByRarity(rarityName)
 end
 
 function RNGModule:GetWeightedRandom()
-	-- Build weighted pool with proper ordering
-	local rarityPool = {}
-	for rarityName, weight in pairs(self.RarityWeights) do
-		table.insert(rarityPool, {
-			name = rarityName,
-			weight = weight
-		})
-	end
-
-	-- Sort by weight (highest to lowest) for consistency
-	table.sort(rarityPool, function(a, b)
-		return a.weight > b.weight
-	end)
-
-	-- Calculate total weight
+	-- STEP 1: Roll for rarity tier (independent of folder contents)
 	local totalWeight = 0
-	for _, rarity in ipairs(rarityPool) do
-		totalWeight = totalWeight + rarity.weight
+	for _, weight in pairs(self.RarityWeights) do
+		totalWeight = totalWeight + weight
 	end
 
-	-- Generate random number and select rarity
 	local random = Random.new()
 	local roll = random:NextNumber(0, totalWeight)
 
+	-- Determine which rarity was rolled
+	local selectedRarity = nil
 	local currentWeight = 0
-	for _, rarity in ipairs(rarityPool) do
-		currentWeight = currentWeight + rarity.weight
+
+	for rarityName, weight in pairs(self.RarityWeights) do
+		currentWeight = currentWeight + weight
 		if roll <= currentWeight then
-			local seatsInRarity = self:GetSeatsByRarity(rarity.name)
-			if #seatsInRarity > 0 then
-				-- Randomly select a chair from this rarity
-				local randomIndex = random:NextInteger(1, #seatsInRarity)
-				return seatsInRarity[randomIndex]
-			end
+			selectedRarity = rarityName
+			break
+		end
+	end
+
+	-- STEP 2: Get a random chair from the selected rarity
+	if selectedRarity then
+		local seatsInRarity = self:GetSeatsByRarity(selectedRarity)
+		if #seatsInRarity > 0 then
+			local randomIndex = random:NextInteger(1, #seatsInRarity)
+			return seatsInRarity[randomIndex]
+		else
+			-- If rarity folder is empty, fallback to Common
+			warn(string.format("[RNG] Rolled %s (%.2f%%) but folder is empty! Falling back to Common.", selectedRarity, (self.RarityWeights[selectedRarity] / totalWeight) * 100))
 		end
 	end
 
