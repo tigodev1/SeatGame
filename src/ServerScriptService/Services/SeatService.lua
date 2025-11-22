@@ -22,6 +22,7 @@ local DataService = nil -- Will be set in KnitStart
 --// State
 local playerChairs = {} -- [player] = chairModel
 local playerConnections = {} -- [player] = {connections}
+local playerAnimations = {} -- [player] = animationTrack
 
 --// Functions
 local function findChairModel(chairName)
@@ -38,6 +39,12 @@ local function findChairModel(chairName)
 end
 
 local function removePlayerChair(player)
+	-- Stop animation
+	if playerAnimations[player] then
+		playerAnimations[player]:Stop()
+		playerAnimations[player] = nil
+	end
+
 	-- Disconnect any connections
 	if playerConnections[player] then
 		for _, connection in playerConnections[player] do
@@ -128,16 +135,7 @@ local function attachChairToPlayer(player, chairName)
 	-- Position AnchorPart on ground at player's X,Z
 	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
 
-	-- Wait a frame for physics to settle
-	task.wait()
-
-	-- Teleport player to Seat to sit them down
-	humanoidRootPart.CFrame = seatPart.CFrame
-
-	-- Wait for player to be seated
-	task.wait(0.1)
-
-	-- NOW weld the AnchorPart to player (after they're seated)
+	-- Weld the AnchorPart to player so chair follows movement
 	local weld = Instance.new("Weld")
 	weld.Name = "ChairToPlayerWeld"
 	weld.Part0 = humanoidRootPart
@@ -146,18 +144,37 @@ local function attachChairToPlayer(player, chairName)
 	weld.C1 = CFrame.new()
 	weld.Parent = anchorPart
 
-	-- Prevent jumping from unseating - monitor and re-seat if needed
-	local unseatConnection = seatPart:GetPropertyChangedSignal("Occupant"):Connect(function()
-		if not seatPart.Occupant and humanoid and humanoid.Parent then
-			-- Player got unseated, re-seat them
-			task.wait()
-			humanoidRootPart.CFrame = seatPart.CFrame
+	-- Wait a moment then position player roughly where seat is
+	task.wait(0.1)
+
+	-- Position player at the seat's position (roughly)
+	local seatPos = seatPart.Position
+	humanoidRootPart.CFrame = CFrame.new(seatPos.X, seatPos.Y, seatPos.Z) * CFrame.Angles(0, rotation, 0)
+
+	-- Play sitting animation
+	task.wait(0.1)
+	local sitAnim = Instance.new("Animation")
+	sitAnim.AnimationId = "rbxassetid://2506281703"
+	local sitTrack = humanoid:LoadAnimation(sitAnim)
+	sitTrack.Priority = Enum.AnimationPriority.Action
+	sitTrack.Looped = true
+	sitTrack:Play()
+
+	-- Prevent jumping from unseating - monitor and re-play animation if needed
+	local unseatConnection = humanoid.StateChanged:Connect(function(_, newState)
+		if newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Freefall then
+			-- Player tried to jump or fall, keep them in sitting animation
+			humanoid:ChangeState(Enum.HumanoidStateType.Seated)
+			if sitTrack and not sitTrack.IsPlaying then
+				sitTrack:Play()
+			end
 		end
 	end)
 
 	-- Store references
 	playerChairs[player] = chairClone
 	playerConnections[player] = {unseatConnection}
+	playerAnimations[player] = sitTrack
 end
 
 function SeatService:SwapPlayerChair(player)
@@ -193,6 +210,7 @@ local function onPlayerRemoving(player)
 	removePlayerChair(player)
 	playerChairs[player] = nil
 	playerConnections[player] = nil
+	playerAnimations[player] = nil
 end
 
 --// Knit Lifecycle
