@@ -127,35 +127,6 @@ local function setupViewport(vp, model, rotate, owned)
 	end
 end
 
---// Equip/Unequip
-local function equipChair(chairName)
-	equippedChair = chairName
-
-	-- Save to server
-	task.spawn(function()
-		pcall(function()
-			data:InvokeServer("SetEquippedChair", chairName)
-		end)
-	end)
-
-	-- Update all chair buttons
-	updateInventory()
-end
-
-local function unequipChair()
-	equippedChair = "Default"
-
-	-- Save to server
-	task.spawn(function()
-		pcall(function()
-			data:InvokeServer("SetEquippedChair", "Default")
-		end)
-	end)
-
-	-- Update all chair buttons
-	updateInventory()
-end
-
 --// Displays
 local function createChair(model, owned)
 	local item = chairTemplate:Clone()
@@ -237,6 +208,35 @@ local function updateInventory()
 			createChair(model, has)
 		end
 	end
+end
+
+--// Equip/Unequip
+local function equipChair(chairName)
+	equippedChair = chairName
+
+	-- Save to server
+	task.spawn(function()
+		pcall(function()
+			data:InvokeServer("SetEquippedChair", chairName)
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
+end
+
+local function unequipChair()
+	equippedChair = "Default"
+
+	-- Save to server
+	task.spawn(function()
+		pcall(function()
+			data:InvokeServer("SetEquippedChair", "Default")
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
 end
 
 --// UI Control
