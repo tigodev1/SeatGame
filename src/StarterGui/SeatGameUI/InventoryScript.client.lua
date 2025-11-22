@@ -149,6 +149,7 @@ local function createChair(model, owned)
 		local isEquipped = equippedChair == model.Name
 
 		equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
+		equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
 		equipBtn.Visible = true
 
 		setupButton(equipBtn)
@@ -207,11 +208,29 @@ updateInventory = function()
 
 	local owned = data:InvokeServer("GetOwnedChairs")
 
+	-- Sort chairs: equipped first, then by name
+	local chairList = {}
 	for _, model in seats:GetChildren() do
 		if model:IsA("Model") then
 			local has = table.find(owned, model.Name) ~= nil
-			createChair(model, has)
+			table.insert(chairList, {model = model, owned = has})
 		end
+	end
+
+	table.sort(chairList, function(a, b)
+		local aEquipped = a.model.Name == equippedChair
+		local bEquipped = b.model.Name == equippedChair
+
+		if aEquipped ~= bEquipped then
+			return aEquipped -- Equipped chair goes first
+		end
+
+		return a.model.Name < b.model.Name -- Then sort alphabetically
+	end)
+
+	-- Create chair items in sorted order
+	for _, entry in ipairs(chairList) do
+		createChair(entry.model, entry.owned)
 	end
 end
 

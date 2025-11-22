@@ -58,9 +58,15 @@ local function createSeatAtPosition(seatPosition, player)
 
 	seatClone.Parent = seatFolder
 
+	-- Get model's pivot and size
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
+
+	-- Calculate offset: position model so its bottom is on top of anchor point
 	local yOffset = modelSize.Y / 2
+
+	-- Position directly on top of anchor point, matching its rotation
 	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
+
 	seatClone:PivotTo(targetCFrame)
 
 	local important = seatPosition:FindFirstChild("Important")
@@ -165,9 +171,15 @@ function SeatMain:SwapPlayerChair(player)
 
 	seatClone.Parent = seatFolder
 
+	-- Get model's pivot and size
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
+
+	-- Calculate offset: position model so its bottom is on top of anchor point
 	local yOffset = modelSize.Y / 2
+
+	-- Position directly on top of anchor point, matching its rotation
 	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
+
 	seatClone:PivotTo(targetCFrame)
 
 	-- Re-seat the player
