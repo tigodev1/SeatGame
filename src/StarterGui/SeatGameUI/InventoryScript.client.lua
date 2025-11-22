@@ -41,7 +41,6 @@ local rngModule = require(seatGame.Modules.RNGModule)
 local isInventoryOpen = false
 local isSpinning = false
 local buttonSizes = {}
-local rollSoundInstance = nil
 local idleRollConnection = nil
 
 --// Config
@@ -293,24 +292,14 @@ local function performSpin()
 	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
 	local targetScroll = targetPosition
 
-	rollSoundInstance = rollSound:Clone()
-	rollSoundInstance.Parent = SoundService
-	rollSoundInstance.Looped = true
-	rollSoundInstance:Play()
-
 	local startTime = os.clock()
+	local currentItemIndex = -1
 
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
 		local elapsed = os.clock() - startTime
 
 		if elapsed >= SPIN_DURATION then
-			if rollSoundInstance then
-				rollSoundInstance:Stop()
-				rollSoundInstance:Destroy()
-				rollSoundInstance = nil
-			end
-
 			connection:Disconnect()
 			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
 
@@ -345,10 +334,13 @@ local function performSpin()
 		end
 
 		local scrollProgress = elapsed / SPIN_DURATION
-		spinList.CanvasPosition = Vector2.new(scrollProgress * targetScroll, 0)
+		local scrollPosition = scrollProgress * targetScroll
+		spinList.CanvasPosition = Vector2.new(scrollPosition, 0)
 
-		if rollSoundInstance then
-			rollSoundInstance.PlaybackSpeed = 1.0
+		local itemIndex = math.floor(scrollPosition / itemWidth)
+		if itemIndex ~= currentItemIndex then
+			currentItemIndex = itemIndex
+			playSound(rollSound)
 		end
 	end)
 end
