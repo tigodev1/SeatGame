@@ -57,6 +57,12 @@ local function attachChairToPlayer(player, chairName)
 
 	-- If chairName is nil or "None", just remove the chair (normal walking)
 	if not chairName or chairName == "None" then
+		-- Make sure sitting animation is stopped
+		for _, track in humanoid:GetPlayingAnimationTracks() do
+			if track.Animation and track.Animation.AnimationId == "rbxassetid://2506281703" then
+				track:Stop()
+			end
+		end
 		return
 	end
 
@@ -94,7 +100,7 @@ local function attachChairToPlayer(player, chairName)
 	-- Parent chair to character
 	chairClone.Parent = character
 
-	-- Weld all chair parts to the AnchorPart
+	-- Weld all chair parts to the AnchorPart FIRST
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") and part ~= anchorPart then
 			local partWeld = Instance.new("WeldConstraint")
@@ -104,28 +110,40 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
-	-- Calculate offset from AnchorPart to Seat in the chair's local space
-	local anchorToSeatOffset = anchorPart.CFrame:ToObjectSpace(seatPart.CFrame)
+	-- Raycast to find ground under player
+	local playerPosition = humanoidRootPart.Position
+	local rayOrigin = playerPosition + Vector3.new(0, 5, 0)
+	local rayDirection = Vector3.new(0, -100, 0)
 
-	-- We want the player to sit ON the seat part, so we need to position
-	-- the chair such that the seat is at the right height
-	-- The seat should be about 2 studs below the player's root
-	local desiredSeatYOffset = -2
+	local raycastParams = RaycastParams.new()
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+	raycastParams.FilterDescendantsInstances = {character, chairClone}
 
-	-- Calculate where the anchor needs to be to put the seat at the right spot
-	local anchorOffset = CFrame.new(0, desiredSeatYOffset, 0) * anchorToSeatOffset:Inverse()
+	local raycastResult = Workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+	local groundY = raycastResult and raycastResult.Position.Y or (playerPosition.Y - 3)
 
-	-- Position the AnchorPart below the player with correct rotation
-	anchorPart.CFrame = humanoidRootPart.CFrame * anchorOffset
+	-- Position AnchorPart on the ground at player X,Z
+	local anchorPosition = Vector3.new(playerPosition.X, groundY, playerPosition.Z)
+	-- Keep the player's facing direction
+	local lookDirection = humanoidRootPart.CFrame.LookVector
+	local anchorCFrame = CFrame.new(anchorPosition) * CFrame.Angles(0, math.atan2(lookDirection.X, lookDirection.Z), 0)
+	anchorPart.CFrame = anchorCFrame
 
-	-- Weld AnchorPart to player so chair follows movement
+	-- Weld AnchorPart to player's HumanoidRootPart so chair follows movement
 	local anchorWeld = Instance.new("Weld")
 	anchorWeld.Name = "ChairToPlayerWeld"
 	anchorWeld.Part0 = humanoidRootPart
 	anchorWeld.Part1 = anchorPart
-	anchorWeld.C0 = anchorOffset
+	-- Calculate the offset from player to anchor
+	anchorWeld.C0 = humanoidRootPart.CFrame:ToObjectSpace(anchorPart.CFrame)
 	anchorWeld.C1 = CFrame.new(0, 0, 0)
 	anchorWeld.Parent = anchorPart
+
+	-- Teleport player to sit on the seat
+	-- Calculate where the player should be to sit on the seat
+	local seatPosition = seatPart.CFrame.Position
+	local seatTop = seatPosition + Vector3.new(0, 2, 0)
+	humanoidRootPart.CFrame = CFrame.new(seatTop) * CFrame.Angles(0, math.atan2(lookDirection.X, lookDirection.Z), 0)
 
 	-- Store reference
 	playerChairs[player] = chairClone
