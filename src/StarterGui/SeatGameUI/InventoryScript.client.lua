@@ -144,41 +144,65 @@ local function populateSpinList()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 end
 
-local function getItemUnderPicker()
-	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
-	local closestChild = nil
-	local closestDistance = math.huge
-
-	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") and child.Visible then
-			local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
-			local distance = math.abs(itemCenter - pickerCenter)
-
-			if distance < closestDistance then
-				closestDistance = distance
-				closestChild = child
-			end
-		end
-	end
-
-	if closestChild then
-		return closestChild:FindFirstChild("Name")
-	end
-
-	return nil
-end
-
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
 
-	populateSpinList()
+	local wonSeat = rngModule:GetWeightedRandom()
+	if not wonSeat then
+		isSpinning = false
+		return
+	end
+
+	for _, child in spinList:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+
+	local models = seatModels:GetChildren()
+	local selectedSeats = {}
+
+	for i = 1, 10 do
+		selectedSeats[i] = models[math.random(1, #models)]
+	end
+
+	local winningIndex = 28
+	for loop = 1, 4 do
+		for i, model in ipairs(selectedSeats) do
+			local display = createSpinDisplay(loop == 3 and i == 8 and wonSeat or model)
+			display.Parent = spinList
+		end
+		if loop < 4 then
+			task.wait()
+		end
+	end
+
+	spinList.CanvasPosition = Vector2.new(0, 0)
 	task.wait(0.2)
+
+	local children = spinList:GetChildren()
+	local targetChild
+	for _, child in ipairs(children) do
+		if child:IsA("GuiObject") and child.LayoutOrder == winningIndex then
+			targetChild = child
+			break
+		end
+	end
+
+	if not targetChild then
+		isSpinning = false
+		return
+	end
+
+	task.wait(0.1)
+
+	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
+	local targetCenter = targetChild.AbsolutePosition.X + (targetChild.AbsoluteSize.X / 2)
+	local targetScroll = targetCenter - pickerCenter
 
 	local duration = 4.5
 	local elapsed = 0
-	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
-	local targetScroll = math.random(maxScroll * 0.55, maxScroll * 0.75)
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
@@ -186,12 +210,7 @@ local function performSpin()
 
 		if elapsed >= duration then
 			connection:Disconnect()
-
-			local wonLabel = getItemUnderPicker()
-			if wonLabel then
-				print("Won seat:", wonLabel.Text)
-			end
-
+			print("Won seat:", wonSeat.Name)
 			task.wait(1)
 			isSpinning = false
 			return
