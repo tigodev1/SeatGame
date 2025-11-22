@@ -93,6 +93,11 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
+	-- CRITICAL: Ensure AnchorPart is unanchored FIRST
+	anchorPart.Anchored = false
+	anchorPart.CanCollide = false
+	anchorPart.Massless = true
+
 	-- Configure all parts in the chair
 	for _, part in chairClone:GetDescendants() do
 		if part:IsA("BasePart") then
@@ -113,6 +118,20 @@ local function attachChairToPlayer(player, chairName)
 			weld.Part0 = anchorPart
 			weld.Part1 = part
 			weld.Parent = part
+		end
+	end
+
+	-- Disable collision between chair and player
+	for _, part in character:GetDescendants() do
+		if part:IsA("BasePart") then
+			for _, chairPart in chairClone:GetDescendants() do
+				if chairPart:IsA("BasePart") then
+					local noCollision = Instance.new("NoCollisionConstraint")
+					noCollision.Part0 = part
+					noCollision.Part1 = chairPart
+					noCollision.Parent = chairClone
+				end
+			end
 		end
 	end
 
