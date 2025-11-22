@@ -161,18 +161,18 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(0.1)
+	task.wait(0.5)
 
-	local duration = 5
+	local duration = 6
 	local elapsed = 0
 	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
 	local targetScroll = math.random(maxScroll * 0.6, maxScroll * 0.9)
 
 	local connection
 	connection = RunService.RenderStepped:Connect(function(dt)
-		elapsed = elapsed + dt
+		elapsed = elapsed + (dt * 60)
 
-		if elapsed >= duration then
+		if elapsed >= duration * 60 then
 			connection:Disconnect()
 
 			local wonLabel = getItemUnderPicker()
@@ -185,8 +185,9 @@ local function performSpin()
 			return
 		end
 
-		local progress = elapsed / duration
-		local eased = 1 - math.pow(1 - progress, 5)
+		local progress = elapsed / (duration * 60)
+		local eased = math.sin((progress * math.pi) / 2)
+		eased = eased * eased
 		local currentScroll = eased * targetScroll
 
 		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
