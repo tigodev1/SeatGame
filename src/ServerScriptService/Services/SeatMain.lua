@@ -1,5 +1,3 @@
---!strict
-
 --// Services
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,9 +9,8 @@ local SeatModels = SeatGame:WaitForChild("SeatModels")
 local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 
 --// Functions
-local function findAvailableSeatPosition(): Folder?
+local function findAvailableSeatPosition()
 	local seatPositions = SeatsPlacing:GetChildren()
-
 	table.sort(seatPositions, function(a, b)
 		return tonumber(a.Name) < tonumber(b.Name)
 	end)
@@ -21,7 +18,7 @@ local function findAvailableSeatPosition(): Folder?
 	for _, positionFolder in ipairs(seatPositions) do
 		local important = positionFolder:FindFirstChild("Important")
 		if important then
-			local occupant = important:FindFirstChild("Occupant") :: StringValue
+			local occupant = important:FindFirstChild("Occupant")
 			if occupant and occupant.Value == "" then
 				return positionFolder
 			end
@@ -31,52 +28,30 @@ local function findAvailableSeatPosition(): Folder?
 	return nil
 end
 
-local function createSeatAtPosition(seatPosition: Folder, player: Player): Seat?
+local function createSeatAtPosition(seatPosition, player)
 	local seatFolder = seatPosition:FindFirstChild("Seat")
-	if not seatFolder then
-		return nil
-	end
-
-	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint") :: BasePart
-	if not anchorPoint then
-		return nil
-	end
-
+	local anchorPoint = seatFolder:FindFirstChild("AnchorPoint")
 	local defaultSeat = SeatModels:FindFirstChild("Default")
-	if not defaultSeat then
-		return nil
-	end
-
 	local seatClone = defaultSeat:Clone()
-	local seatPart = seatClone:FindFirstChild("Seat") :: Seat
-
-	if not seatPart or not seatPart:IsA("Seat") then
-		seatClone:Destroy()
-		return nil
-	end
+	local seatPart = seatClone:FindFirstChild("Seat")
 
 	seatClone.Parent = seatFolder
 
 	local modelCFrame, modelSize = seatClone:GetBoundingBox()
 	local yOffset = modelSize.Y / 2
-
 	local targetCFrame = anchorPoint.CFrame * CFrame.new(0, yOffset, 0)
 	seatClone:PivotTo(targetCFrame)
 
 	local important = seatPosition:FindFirstChild("Important")
-	if important then
-		local occupant = important:FindFirstChild("Occupant") :: StringValue
-		if occupant then
-			occupant.Value = player.Name
-		end
-	end
+	local occupant = important:FindFirstChild("Occupant")
+	occupant.Value = player.Name
 
 	return seatPart
 end
 
-local function setupPlayerControls(player: Player, seatPart: Seat)
+local function setupPlayerControls(player, seatPart)
 	local character = player.Character or player.CharacterAdded:Wait()
-	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
+	local humanoid = character:WaitForChild("Humanoid")
 
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
@@ -90,7 +65,7 @@ local function setupPlayerControls(player: Player, seatPart: Seat)
 		humanoid.Health = humanoid.MaxHealth
 	end)
 
-	local connection: RBXScriptConnection
+	local connection
 	connection = humanoid.StateChanged:Connect(function(oldState, newState)
 		if newState ~= Enum.HumanoidStateType.Seated then
 			if seatPart and seatPart.Parent then
@@ -101,32 +76,24 @@ local function setupPlayerControls(player: Player, seatPart: Seat)
 			end
 		end
 	end)
-
-	character:SetAttribute("SeatConnection", true)
 end
 
-local function seatPlayer(player: Player)
+local function seatPlayer(player)
 	local character = player.Character
 	if not character then
 		player.CharacterAdded:Wait()
 		character = player.Character
 	end
 
-	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
-	local humanoidRootPart = character:WaitForChild("HumanoidRootPart") :: BasePart
-
+	local humanoid = character:WaitForChild("Humanoid")
+	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 	local seatPosition = findAvailableSeatPosition()
-	if not seatPosition then
-		return
-	end
+
+	if not seatPosition then return end
 
 	local seatPart = createSeatAtPosition(seatPosition, player)
-	if not seatPart then
-		return
-	end
 
 	task.wait(0.1)
-
 	humanoidRootPart.CFrame = seatPart.CFrame + Vector3.new(0, 2, 0)
 	task.wait(0.1)
 	seatPart:Sit(humanoid)
@@ -135,7 +102,7 @@ local function seatPlayer(player: Player)
 end
 
 --// Handlers
-local function onPlayerAdded(player: Player)
+local function onPlayerAdded(player)
 	player.CharacterAdded:Connect(function()
 		task.wait(0.5)
 		seatPlayer(player)
@@ -147,11 +114,11 @@ local function onPlayerAdded(player: Player)
 	end
 end
 
-local function onPlayerRemoving(player: Player)
+local function onPlayerRemoving(player)
 	for _, position in ipairs(SeatsPlacing:GetChildren()) do
 		local important = position:FindFirstChild("Important")
 		if important then
-			local occupant = important:FindFirstChild("Occupant") :: StringValue
+			local occupant = important:FindFirstChild("Occupant")
 			if occupant and occupant.Value == player.Name then
 				occupant.Value = ""
 

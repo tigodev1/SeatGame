@@ -1,9 +1,7 @@
---!strict
-
 --// Services
 local StarterGui = game:GetService("StarterGui")
 
---// Disable Reset Button
+--// Initialize
 task.spawn(function()
 	pcall(function()
 		StarterGui:SetCore("ResetButtonCallback", false)

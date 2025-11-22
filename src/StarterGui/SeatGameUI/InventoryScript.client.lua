@@ -1,33 +1,23 @@
+--// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+--// Instances
 local screenGui = script.Parent
-local canvas = screenGui:FindFirstChild("Canvas")
-if not canvas then return end
+local canvas = screenGui:WaitForChild("Canvas")
+local buttonContainer = canvas:WaitForChild("ButtonContainer")
+local inventoryButton = buttonContainer:WaitForChild("InventoryButton")
+local inventoryFrame = canvas:WaitForChild("Inventory")
+local list = inventoryFrame:WaitForChild("List")
+local chairTemplate = script:WaitForChild("ChairTemplate")
 
-local buttonContainer = canvas:FindFirstChild("ButtonContainer")
-if not buttonContainer then return end
+local seatGame = ReplicatedStorage:WaitForChild("SeatGame")
+local seatModels = seatGame:WaitForChild("SeatModels")
 
-local inventoryButton = buttonContainer:FindFirstChild("InventoryButton")
-if not inventoryButton then return end
-
-local inventoryFrame = canvas:FindFirstChild("Inventory")
-if not inventoryFrame then return end
-
-local list = inventoryFrame:FindFirstChild("List")
-if not list then return end
-
-local chairTemplate = script:FindFirstChild("ChairTemplate")
-if not chairTemplate then return end
-
-local seatGame = ReplicatedStorage:WaitForChild("SeatGame", 10)
-if not seatGame then return end
-
-local seatModels = seatGame:WaitForChild("SeatModels", 10)
-if not seatModels then return end
-
+--// Variables
 local isInventoryOpen = false
 
+--// Functions
 local function createViewportCamera(viewport)
 	local camera = Instance.new("Camera")
 	camera.Parent = viewport
@@ -37,7 +27,6 @@ end
 
 local function setupChairInViewport(viewport, chairModel)
 	local camera = createViewportCamera(viewport)
-
 	local clone = chairModel:Clone()
 	clone.Parent = viewport
 
@@ -77,7 +66,7 @@ end
 
 local function populateInventory()
 	for _, child in list:GetChildren() do
-		if child:IsA("Frame") or child:IsA("GuiObject") then
+		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
 	end
@@ -98,5 +87,6 @@ local function toggleInventory()
 	end
 end
 
+--// Initialize
 inventoryFrame.Visible = false
 inventoryButton.MouseButton1Click:Connect(toggleInventory)
