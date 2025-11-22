@@ -10,12 +10,11 @@ local Players = game:GetService("Players")
 --// Knit
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
---// Add Controllers
--- The UIController is located in StarterGui/SeatGameUI
+--// Add Controllers manually
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local seatGameUI = playerGui:WaitForChild("SeatGameUI")
-Knit.AddControllers(seatGameUI)
+local UIController = require(seatGameUI:WaitForChild("UIController"))
 
 --// Start Knit
 Knit.Start():andThen(function()
