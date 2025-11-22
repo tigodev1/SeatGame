@@ -38,7 +38,7 @@ local clickSound = sounds:WaitForChild("Click")
 local rollSound = sounds:WaitForChild("Roll")
 local rewardSound = sounds:WaitForChild("Reward")
 local rng = require(game.Modules.RNGModule)
-local spin = require(script:WaitForChild("SpinModule"))
+local spin = require(game.Modules.SpinModule)
 local data = game:WaitForChild("DataRemote")
 
 --// State
