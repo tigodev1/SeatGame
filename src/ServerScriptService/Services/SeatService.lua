@@ -70,19 +70,12 @@ local function attachChairToPlayer(player, chairName)
 
 	local chairClone = chairModel:Clone()
 
-	-- Find the AnchorPart and Seat part
+	-- Find the AnchorPart and Seat2 part
 	local anchorPart = chairClone:FindFirstChild("AnchorPart")
-	local seatPart = chairClone:FindFirstChild("Seat")
+	local seat2Part = chairClone:FindFirstChild("Seat2")
 
-	if not anchorPart or not seatPart then
-		warn("Chair missing AnchorPart or Seat:", chairName)
-		chairClone:Destroy()
-		return
-	end
-
-	-- Make sure Seat part is actually a Seat
-	if not seatPart:IsA("Seat") then
-		warn("Seat part is not a Seat object:", chairName)
+	if not anchorPart or not seat2Part then
+		warn("Chair missing AnchorPart or Seat2:", chairName)
 		chairClone:Destroy()
 		return
 	end
@@ -147,9 +140,9 @@ local function attachChairToPlayer(player, chairName)
 	-- Store reference
 	playerChairs[player] = chairClone
 
-	-- Sit the player on the seat (Roblox handles the animation automatically)
+	-- Teleport player to Seat2 position to trigger automatic sitting
 	task.wait(0.1)
-	seatPart:Sit(humanoid)
+	humanoidRootPart.CFrame = seat2Part.CFrame
 end
 
 function SeatService:SwapPlayerChair(player)
