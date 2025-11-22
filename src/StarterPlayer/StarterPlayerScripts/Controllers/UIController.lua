@@ -335,9 +335,10 @@ function UIController:KnitInit()
 	spinAction = spinFrame:WaitForChild("Spin")
 	invList = invFrame:WaitForChild("List")
 
-	-- Get templates from SeatGameUI
-	chairTemplate = gui:WaitForChild("ChairTemplate")
-	spinTemplate = gui:WaitForChild("SpinTemplate")
+	-- Get templates from StarterPlayerScripts/Templates
+	local templatesFolder = script.Parent.Parent:WaitForChild("Templates")
+	chairTemplate = templatesFolder:WaitForChild("ChairTemplate")
+	spinTemplate = templatesFolder:WaitForChild("SpinTemplate")
 
 	-- Get game elements
 	seatGame = ReplicatedStorage:WaitForChild("SeatGame")
