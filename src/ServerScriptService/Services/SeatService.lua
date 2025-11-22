@@ -108,6 +108,11 @@ local function attachChairToPlayer(player, chairName)
 		end
 	end
 
+	-- Teleport player to Seat position to sit them on the seat
+	task.wait(0.1)
+	humanoidRootPart.CFrame = seatPart.CFrame
+	task.wait(0.1)
+
 	-- Raycast to find ground under player
 	local playerPosition = humanoidRootPart.Position
 	local rayOrigin = playerPosition + Vector3.new(0, 5, 0)
@@ -139,10 +144,6 @@ local function attachChairToPlayer(player, chairName)
 
 	-- Store reference
 	playerChairs[player] = chairClone
-
-	-- Teleport player to Seat position to trigger automatic sitting
-	task.wait(0.1)
-	humanoidRootPart.CFrame = seatPart.CFrame
 end
 
 function SeatService:SwapPlayerChair(player)
