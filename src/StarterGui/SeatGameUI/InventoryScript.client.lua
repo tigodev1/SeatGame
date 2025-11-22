@@ -48,7 +48,7 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	clone.Parent = viewport
 
 	local cframe, size = clone:GetBoundingBox()
-	local distance = 5
+	local distance = 7
 
 	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance/3, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
@@ -125,7 +125,7 @@ local function populateSpinList()
 	local models = seatModels:GetChildren()
 	local spinItems = {}
 
-	for i = 1, 50 do
+	for i = 1, 30 do
 		local randomModel = models[math.random(1, #models)]
 		table.insert(spinItems, randomModel)
 	end
@@ -149,12 +149,19 @@ local function performSpin()
 	end
 
 	populateSpinList()
+	task.wait(0.2)
+
+	local targetIndex = 25
+	local winDisplay = createSpinDisplay(wonSeat)
+	winDisplay.Parent = spinList
+	winDisplay.LayoutOrder = targetIndex
+
 	task.wait(0.1)
 
 	local children = spinList:GetChildren()
 	local validChildren = {}
 	for _, child in ipairs(children) do
-		if child:IsA("GuiObject") then
+		if child:IsA("GuiObject") and child.LayoutOrder == targetIndex then
 			table.insert(validChildren, child)
 		end
 	end
@@ -164,22 +171,22 @@ local function performSpin()
 		return
 	end
 
-	local targetIndex = math.random(40, 45)
-	local targetChild = validChildren[targetIndex]
+	local targetChild = validChildren[1]
+	task.wait()
 
-	local winDisplay = createSpinDisplay(wonSeat)
-	winDisplay.Parent = spinList
-	winDisplay.LayoutOrder = targetIndex
+	local itemSize = targetChild.AbsoluteSize.X
+	local centerOffset = spinList.AbsoluteSize.X / 2
+	local targetPositionX = targetChild.AbsolutePosition.X - spinList.AbsolutePosition.X
+	local finalPosition = targetPositionX - centerOffset + (itemSize / 2)
 
-	local targetPosition = targetChild.AbsolutePosition.X - spinList.AbsolutePosition.X
 	local tweenInfo = TweenInfo.new(
-		5,
-		Enum.EasingStyle.Quart,
+		4,
+		Enum.EasingStyle.Quint,
 		Enum.EasingDirection.Out
 	)
 
 	local tween = TweenService:Create(spinList, tweenInfo, {
-		CanvasPosition = Vector2.new(targetPosition - (spinList.AbsoluteSize.X / 2), 0)
+		CanvasPosition = Vector2.new(finalPosition, 0)
 	})
 
 	tween:Play()
