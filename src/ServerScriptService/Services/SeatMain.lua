@@ -10,7 +10,7 @@ local SeatModels = SeatGame:WaitForChild("SeatModels")
 local SeatsPlacing = Workspace:WaitForChild("SeatsPlacing")
 
 --// Modules
-local DataManager = require(ServerScriptService.DataManager)
+local DataManager = require(script.DataManager)
 
 --// Module
 local SeatMain = {}
