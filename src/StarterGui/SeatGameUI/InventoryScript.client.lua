@@ -41,8 +41,8 @@ local dataRemote = seatGame:WaitForChild("DataRemote")
 
 --// Config
 local IDLE_SCROLL_SPEED = 15
-local FRAME_TWEEN_INFO = TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-local BUTTON_TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BUTTON_TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local BUTTON_CLICK_INFO = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 --// Variables
 local isInventoryOpen = false
@@ -69,28 +69,13 @@ local function scaleUDim2(udim2, scale)
 	)
 end
 
-local function animateFrameIn(frame)
+local function showFrame(frame)
 	frame.Visible = true
-	frame.Position = frame.Position + UDim2.new(0, 0, 0.05, 0)
-	frame.BackgroundTransparency = 1
-
-	TweenService:Create(frame, FRAME_TWEEN_INFO, {
-		Position = frame.Position - UDim2.new(0, 0, 0.05, 0),
-		BackgroundTransparency = frame.BackgroundTransparency
-	}):Play()
 end
 
-local function animateFrameOut(frame, callback)
-	local originalPos = frame.Position
-	local tween = TweenService:Create(frame, FRAME_TWEEN_INFO, {
-		Position = frame.Position + UDim2.new(0, 0, 0.05, 0)
-	})
-	tween.Completed:Connect(function()
-		frame.Visible = false
-		frame.Position = originalPos
-		if callback then callback() end
-	end)
-	tween:Play()
+local function hideFrame(frame, callback)
+	frame.Visible = false
+	if callback then callback() end
 end
 
 --// Button Animation Setup
@@ -98,10 +83,12 @@ local function setupButtonAnimation(button)
 	buttonSizes[button] = button.Size
 
 	button.MouseEnter:Connect(function()
-		playSound(hoverSound)
-		TweenService:Create(button, BUTTON_TWEEN_INFO, {
-			Size = scaleUDim2(buttonSizes[button], 1.05)
-		}):Play()
+		if button.Active then
+			playSound(hoverSound)
+			TweenService:Create(button, BUTTON_TWEEN_INFO, {
+				Size = scaleUDim2(buttonSizes[button], 1.05)
+			}):Play()
+		end
 	end)
 
 	button.MouseLeave:Connect(function()
@@ -111,15 +98,19 @@ local function setupButtonAnimation(button)
 	end)
 
 	button.MouseButton1Down:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = scaleUDim2(buttonSizes[button], 0.95)
-		}):Play()
+		if button.Active then
+			TweenService:Create(button, BUTTON_CLICK_INFO, {
+				Size = scaleUDim2(buttonSizes[button], 0.95)
+			}):Play()
+		end
 	end)
 
 	button.MouseButton1Up:Connect(function()
-		TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = scaleUDim2(buttonSizes[button], 1.05)
-		}):Play()
+		if button.Active then
+			TweenService:Create(button, BUTTON_CLICK_INFO, {
+				Size = scaleUDim2(buttonSizes[button], 1.05)
+			}):Play()
+		end
 	end)
 end
 
@@ -282,7 +273,10 @@ local function performSpin()
 	playSound(clickSound)
 
 	spinActionButton.Active = false
-	spinActionButton.BackgroundTransparency = 0.5
+	spinActionButton.Text = "SPINNING..."
+	TweenService:Create(spinActionButton, TweenInfo.new(0.2), {
+		BackgroundTransparency = 0.7
+	}):Play()
 
 	local models = seatModels:GetChildren()
 
@@ -296,10 +290,13 @@ local function performSpin()
 			end
 		end
 
-		task.wait(1.5)
+		task.wait(1)
 		isSpinning = false
 		spinActionButton.Active = true
-		spinActionButton.BackgroundTransparency = 0
+		spinActionButton.Text = "SPIN"
+		TweenService:Create(spinActionButton, TweenInfo.new(0.2), {
+			BackgroundTransparency = 0
+		}):Play()
 		startIdleRoll()
 	end)
 end
@@ -307,11 +304,11 @@ end
 --// UI Control Functions
 local function closeInventory()
 	isInventoryOpen = false
-	animateFrameOut(inventoryFrame)
+	hideFrame(inventoryFrame)
 end
 
 local function closeSpinning()
-	animateFrameOut(spinningFrame, function()
+	hideFrame(spinningFrame, function()
 		stopIdleRoll()
 	end)
 end
@@ -321,13 +318,13 @@ local function toggleInventory()
 	isInventoryOpen = not isInventoryOpen
 
 	if isInventoryOpen then
-		animateFrameIn(inventoryFrame)
+		showFrame(inventoryFrame)
 		populateInventory()
 		if spinningFrame.Visible then
-			animateFrameOut(spinningFrame)
+			hideFrame(spinningFrame)
 		end
 	else
-		animateFrameOut(inventoryFrame)
+		hideFrame(inventoryFrame)
 	end
 end
 
@@ -336,14 +333,14 @@ local function toggleSpinning()
 	local wasVisible = spinningFrame.Visible
 
 	if not wasVisible then
-		animateFrameIn(spinningFrame)
+		showFrame(spinningFrame)
 		populateSpinList()
 		startIdleRoll()
 		if inventoryFrame.Visible then
-			animateFrameOut(inventoryFrame)
+			hideFrame(inventoryFrame)
 		end
 	else
-		animateFrameOut(spinningFrame, function()
+		hideFrame(spinningFrame, function()
 			stopIdleRoll()
 		end)
 	end
