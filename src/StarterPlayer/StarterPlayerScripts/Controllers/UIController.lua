@@ -30,7 +30,9 @@ local spinButton = nil
 local invFrame = nil
 local invClose = nil
 local ownedButton = nil
+local ownedStroke = nil
 local indexButton = nil
+local indexStroke = nil
 local invList = nil
 local invGridLayout = nil
 local spinFrame = nil
@@ -341,13 +343,67 @@ unequipChair = function()
 end
 
 --// Category Switching
+local function updateCategoryHighlight()
+	if not ownedStroke or not indexStroke then return end
+
+	local activeColor = Color3.fromRGB(255, 255, 255)
+	local inactiveColor = Color3.fromRGB(173, 173, 173)
+
+	if currentCategory == "Owned" then
+		-- Animate Owned to active
+		TweenService:Create(ownedStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = activeColor
+		}):Play()
+
+		-- Animate Index to inactive
+		TweenService:Create(indexStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = inactiveColor
+		}):Play()
+	else
+		-- Animate Index to active
+		TweenService:Create(indexStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = activeColor
+		}):Play()
+
+		-- Animate Owned to inactive
+		TweenService:Create(ownedStroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Color = inactiveColor
+		}):Play()
+	end
+end
+
 local function switchToOwned()
 	if currentCategory == "Owned" then return end
 
 	playSound(clickSound)
 	currentCategory = "Owned"
 
+	-- Fade out current items
+	for _, child in invList:GetChildren() do
+		if child:IsA("GuiObject") then
+			TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				GroupTransparency = 1
+			}):Play()
+		end
+	end
+
+	-- Wait for fade out, then update
+	task.wait(0.15)
 	updateInventory()
+	updateCategoryHighlight()
+
+	-- Staggered fade in for new items (polished effect)
+	local children = invList:GetChildren()
+	for i, child in children do
+		if child:IsA("GuiObject") then
+			child.GroupTransparency = 1
+			task.delay(i * 0.02, function()
+				TweenService:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					GroupTransparency = 0
+				}):Play()
+			end)
+		end
+	end
 end
 
 local function switchToIndex()
@@ -356,13 +412,46 @@ local function switchToIndex()
 	playSound(clickSound)
 	currentCategory = "Index"
 
+	-- Fade out current items
+	for _, child in invList:GetChildren() do
+		if child:IsA("GuiObject") then
+			TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				GroupTransparency = 1
+			}):Play()
+		end
+	end
+
+	-- Wait for fade out, then update
+	task.wait(0.15)
 	updateInventory()
+	updateCategoryHighlight()
+
+	-- Staggered fade in for new items (polished effect)
+	local children = invList:GetChildren()
+	for i, child in children do
+		if child:IsA("GuiObject") then
+			child.GroupTransparency = 1
+			task.delay(i * 0.02, function()
+				TweenService:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					GroupTransparency = 0
+				}):Play()
+			end)
+		end
+	end
 end
 
 --// UI Control
 local function closeInv()
 	invOpen = false
+
+	-- Smooth fade out
+	TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		GroupTransparency = 1
+	}):Play()
+
+	task.wait(0.15)
 	hide(invFrame)
+	invFrame.GroupTransparency = 0
 end
 
 local function toggleInv()
@@ -371,10 +460,24 @@ local function toggleInv()
 
 	if invOpen then
 		show(invFrame)
+		invFrame.GroupTransparency = 1
+
+		-- Smooth fade in
+		TweenService:Create(invFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			GroupTransparency = 0
+		}):Play()
+
 		updateInventory()
 		if spinFrame.Visible then hide(spinFrame) end
 	else
+		-- Smooth fade out
+		TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			GroupTransparency = 1
+		}):Play()
+
+		task.wait(0.15)
 		hide(invFrame)
+		invFrame.GroupTransparency = 0
 	end
 end
 
@@ -384,9 +487,31 @@ local function toggleSpin()
 
 	if not vis then
 		show(spinFrame)
-		if invFrame.Visible then hide(invFrame) end
+		spinFrame.GroupTransparency = 1
+
+		-- Smooth fade in
+		TweenService:Create(spinFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			GroupTransparency = 0
+		}):Play()
+
+		if invFrame.Visible then
+			-- Fade out inventory
+			TweenService:Create(invFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				GroupTransparency = 1
+			}):Play()
+			task.wait(0.15)
+			hide(invFrame)
+			invFrame.GroupTransparency = 0
+		end
 	else
+		-- Smooth fade out
+		TweenService:Create(spinFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			GroupTransparency = 1
+		}):Play()
+
+		task.wait(0.15)
 		hide(spinFrame)
+		spinFrame.GroupTransparency = 0
 	end
 end
 
@@ -413,6 +538,10 @@ function UIController:KnitInit()
 	indexButton = invFrame:WaitForChild("Index")
 	invList = invFrame:WaitForChild("List")
 	invGridLayout = invList:FindFirstChildOfClass("UIGridLayout")
+
+	-- Get UIStrokes for category buttons
+	ownedStroke = ownedButton:FindFirstChildOfClass("UIStroke")
+	indexStroke = indexButton:FindFirstChildOfClass("UIStroke")
 	spinFrame = canvas:WaitForChild("SpinningFrame")
 	spinClose = spinFrame:WaitForChild("CloseButton")
 	spinContainer = spinFrame:WaitForChild("SpinContainer")
@@ -461,6 +590,9 @@ function UIController:KnitInit()
 
 	ownedButton.MouseButton1Click:Connect(switchToOwned)
 	indexButton.MouseButton1Click:Connect(switchToIndex)
+
+	-- Set initial category highlight
+	updateCategoryHighlight()
 end
 
 function UIController:KnitStart()
