@@ -124,16 +124,12 @@ local function populateSpinList()
 	end
 
 	local models = seatModels:GetChildren()
-	local spinItems = {}
 
-	for i = 1, 50 do
+	for i = 1, 25 do
 		local randomModel = models[math.random(1, #models)]
-		table.insert(spinItems, randomModel)
-	end
-
-	for _, model in ipairs(spinItems) do
-		local display = createSpinDisplay(model)
+		local display = createSpinDisplay(randomModel)
 		display.Parent = spinList
+		task.wait()
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
@@ -161,7 +157,7 @@ local function performSpin()
 	isSpinning = true
 
 	populateSpinList()
-	task.wait(0.5)
+	task.wait(1)
 
 	local duration = 6
 	local elapsed = 0
