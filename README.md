@@ -14,27 +14,33 @@ Join the game → instantly sitting
 
 ## 🛠️ Setup Instructions
 
-This project uses [Rojo](https://rojo.space/) to sync the filesystem with Roblox Studio.
+### Getting the Code in VS Code
 
-### Prerequisites
-- Install [Rojo](https://rojo.space/docs/v7/getting-started/installation/)
-- Install the Rojo plugin in Roblox Studio
+1. **Open VS Code** and open the terminal (Ctrl+` or Terminal → New Terminal)
 
-### Getting Started
-
-1. **Build the project:**
+2. **Clone the repository:**
    ```bash
-   rojo build -o SeatGame.rbxl
+   git clone https://github.com/tigodev1/SeatGame.git
+   cd SeatGame
    ```
 
-2. **Open in Roblox Studio:**
-   - Open `SeatGame.rbxl` in Roblox Studio
-
-3. **Live Sync (for development):**
+3. **Switch to the game branch:**
    ```bash
-   rojo serve
+   git checkout claude/rng-seat-game-01SESGcnieiiXLjA5sNuvgaL
    ```
-   Then connect from Roblox Studio using the Rojo plugin.
+
+4. **Pull latest changes:**
+   ```bash
+   git pull
+   ```
+
+### Using the Scripts in Roblox Studio
+
+1. Open your Roblox Studio place
+2. Copy the Lua scripts from the `src/` folder into your game:
+   - `src/ServerScriptService/Services/SeatMain.lua` → ServerScriptService > Services (create a folder called "Services")
+3. Set up the workspace structure as shown in the Project Structure section below
+4. Copy the seat model data into ReplicatedStorage
 
 ## 📁 Project Structure
 
