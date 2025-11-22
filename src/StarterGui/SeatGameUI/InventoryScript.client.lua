@@ -237,6 +237,7 @@ local function performSpin()
 		local modelToUse = i == winningIndex and wonSeat or models[math.random(1, #models)]
 		local display = createSpinDisplay(modelToUse)
 		display.LayoutOrder = i
+		display.Name = "SpinItem_" .. i
 		display.Parent = spinList
 
 		if i % 10 == 0 then
