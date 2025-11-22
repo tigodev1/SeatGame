@@ -78,7 +78,7 @@ function DataManager:AddChair(player, chairName)
 		return false
 	end
 
-	if not data.OwnedChairs[chairName] then
+	if data.OwnedChairs[chairName] == false then
 		data.OwnedChairs[chairName] = true
 		print(`[DataManager] Unlocked {chairName} for {player.Name}`)
 
@@ -88,6 +88,7 @@ function DataManager:AddChair(player, chairName)
 
 		if success then
 			print(`[DataManager] Successfully saved profile for {player.Name}`)
+			print(`[DataManager] Updated owned chairs:`, data.OwnedChairs)
 		else
 			warn(`[DataManager] Failed to save profile for {player.Name}: {err}`)
 		end
@@ -129,6 +130,22 @@ local function onPlayerAdded(player)
 	if profile then
 		profile:AddUserId(player.UserId)
 		profile:Reconcile()
+
+		local seatModels = SeatGame:FindFirstChild("SeatModels")
+		if seatModels then
+			for _, seatModel in seatModels:GetChildren() do
+				if seatModel:IsA("Model") then
+					if profile.Data.OwnedChairs[seatModel.Name] == nil then
+						profile.Data.OwnedChairs[seatModel.Name] = false
+						print(`[DataManager] Added new seat {seatModel.Name} to {player.Name}'s profile`)
+					end
+				end
+			end
+		end
+
+		if profile.Data.OwnedChairs["Default"] == nil then
+			profile.Data.OwnedChairs["Default"] = true
+		end
 
 		profiles[player] = profile
 
