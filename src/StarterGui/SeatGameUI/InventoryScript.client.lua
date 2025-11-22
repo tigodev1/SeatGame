@@ -113,7 +113,7 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 	clone.Parent = viewport
 
 	local cframe, size = clone:GetBoundingBox()
-	local distance = math.max(size.X, size.Y, size.Z) * 1.3
+	local distance = math.max(size.X, size.Y, size.Z) * 1.0
 
 	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance * 0.3, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
@@ -225,7 +225,7 @@ local function startIdleRoll()
 			if maxScroll > 0 then
 				local newPosition = spinList.CanvasPosition.X + (IDLE_SCROLL_SPEED * dt)
 				if newPosition > maxScroll then
-					newPosition = 0
+					newPosition = newPosition % maxScroll
 				end
 				spinList.CanvasPosition = Vector2.new(newPosition, 0)
 			end
@@ -305,14 +305,14 @@ local function performSpin()
 		local elapsed = os.clock() - startTime
 
 		if elapsed >= SPIN_DURATION then
-			connection:Disconnect()
-			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
-
 			if rollSoundInstance then
 				rollSoundInstance:Stop()
 				rollSoundInstance:Destroy()
 				rollSoundInstance = nil
 			end
+
+			connection:Disconnect()
+			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
 
 			task.wait(0.2)
 
