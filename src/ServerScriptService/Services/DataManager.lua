@@ -88,11 +88,20 @@ function DataManager:AddChair(player, chairName)
 end
 
 function DataManager:SetEquippedChair(player, chairName)
-	local data = self:GetData(player)
+	local profile = self:GetProfile(player)
+	if not profile then return false end
+
+	local data = profile.Data
 	if not data then return false end
 
 	if data.OwnedChairs[chairName] then
 		data.EquippedChair = chairName
+
+		-- Save to datastore
+		pcall(function()
+			profile:Save()
+		end)
+
 		return true
 	end
 
@@ -179,6 +188,9 @@ remoteFunction.OnServerInvoke = function(player, action, ...)
 		return {"Default"}
 	elseif action == "GetEquippedChair" then
 		return DataManager:GetEquippedChair(player)
+	elseif action == "SetEquippedChair" then
+		local chairName = ...
+		return DataManager:SetEquippedChair(player, chairName)
 	elseif action == "UnlockChair" then
 		local chairName = ...
 		return DataManager:AddChair(player, chairName)

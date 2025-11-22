@@ -44,6 +44,7 @@ local data = game:WaitForChild("DataRemote")
 --// State
 local invOpen = false
 local buttonSizes = {}
+local equippedChair = "Default"
 
 --// Utils
 local function playSound(sound)
@@ -126,6 +127,35 @@ local function setupViewport(vp, model, rotate, owned)
 	end
 end
 
+--// Equip/Unequip
+local function equipChair(chairName)
+	equippedChair = chairName
+
+	-- Save to server
+	task.spawn(function()
+		pcall(function()
+			data:InvokeServer("SetEquippedChair", chairName)
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
+end
+
+local function unequipChair()
+	equippedChair = "Default"
+
+	-- Save to server
+	task.spawn(function()
+		pcall(function()
+			data:InvokeServer("SetEquippedChair", "Default")
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
+end
+
 --// Displays
 local function createChair(model, owned)
 	local item = chairTemplate:Clone()
@@ -136,6 +166,29 @@ local function createChair(model, owned)
 
 	local name = item:FindFirstChild("Name")
 	if name then name.Text = model.Name end
+
+	-- Setup equip button
+	local equipBtn = item:FindFirstChild("Equip")
+	if equipBtn and owned then
+		local isEquipped = equippedChair == model.Name
+
+		equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
+		equipBtn.Visible = true
+
+		setupButton(equipBtn)
+
+		equipBtn.MouseButton1Click:Connect(function()
+			playSound(clickSound)
+
+			if equippedChair == model.Name then
+				unequipChair()
+			else
+				equipChair(model.Name)
+			end
+		end)
+	elseif equipBtn then
+		equipBtn.Visible = false
+	end
 
 	item.Parent = invList
 end
@@ -165,6 +218,15 @@ local function updateInventory()
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
+	end
+
+	-- Get equipped chair from server
+	local success, result = pcall(function()
+		return data:InvokeServer("GetEquippedChair")
+	end)
+
+	if success and result then
+		equippedChair = result
 	end
 
 	local owned = data:InvokeServer("GetOwnedChairs")
