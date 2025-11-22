@@ -227,61 +227,68 @@ local function performSpin()
 	end
 
 	local models = seatModels:GetChildren()
-	local winningPosition = 28
-	local itemCount = 0
+	local winningIndex = 35
 
-	for loop = 1, 4 do
-		for i = 1, 10 do
-			itemCount = itemCount + 1
-			local modelToUse = itemCount == winningPosition and wonSeat or models[math.random(1, #models)]
-			local display = createSpinDisplay(modelToUse)
-			display.LayoutOrder = itemCount
-			display.Parent = spinList
-		end
-		if loop < 4 then
+	for i = 1, 50 do
+		local modelToUse = i == winningIndex and wonSeat or models[math.random(1, #models)]
+		local display = createSpinDisplay(modelToUse)
+		display.LayoutOrder = i
+		display.Name = "SpinItem_" .. i
+		display.Parent = spinList
+
+		if i % 10 == 0 then
 			task.wait()
 		end
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.3)
+	task.wait(0.5)
 
-	local targetChild = nil
+	local uiListLayout = spinList:FindFirstChildOfClass("UIListLayout")
+	if uiListLayout then
+		uiListLayout:ApplyLayout()
+	end
+	task.wait(0.1)
+
+	local allItems = {}
 	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") and child.LayoutOrder == winningPosition then
-			targetChild = child
-			break
+		if child:IsA("GuiObject") and child.Name:match("SpinItem") then
+			table.insert(allItems, child)
 		end
 	end
 
-	if not targetChild then
+	table.sort(allItems, function(a, b)
+		return a.LayoutOrder < b.LayoutOrder
+	end)
+
+	if #allItems == 0 then
 		isSpinning = false
 		return
 	end
 
-	task.wait(0.2)
+	local itemWidth = allItems[1].AbsoluteSize.X
+	local spacing = uiListLayout and uiListLayout.Padding.Offset or 0
+	local totalItemWidth = itemWidth + spacing
 
-	local itemWidth = targetChild.AbsoluteSize.X
-	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetItemCenter = (winningPosition - 0.5) * itemWidth
-	local pickerOffsetFromLeft = (picker.AbsolutePosition.X - spinContainer.AbsolutePosition.X) + (picker.AbsoluteSize.X / 2)
-	local finalScroll = targetItemCenter - pickerOffsetFromLeft
+	local containerCenter = spinContainer.AbsoluteSize.X / 2
+	local targetScrollX = ((winningIndex - 1) * totalItemWidth) - containerCenter + (itemWidth / 2)
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
 	rollSoundInstance.Looped = true
 	rollSoundInstance:Play()
 
-	local duration = 5
-	local startTime = tick()
+	local spinDuration = 6
+	local startTime = os.clock()
 
 	local connection
-	connection = RunService.RenderStepped:Connect(function()
-		local elapsed = tick() - startTime
+	connection = RunService.Heartbeat:Connect(function()
+		local elapsed = os.clock() - startTime
+		local progress = math.min(elapsed / spinDuration, 1)
 
-		if elapsed >= duration then
+		if progress >= 1 then
 			connection:Disconnect()
-			spinList.CanvasPosition = Vector2.new(finalScroll, 0)
+			spinList.CanvasPosition = Vector2.new(targetScrollX, 0)
 
 			if rollSoundInstance then
 				rollSoundInstance:Stop()
@@ -290,26 +297,28 @@ local function performSpin()
 			end
 
 			print("Won seat:", wonSeat.Name)
-			task.wait(1)
+			task.wait(2)
 			isSpinning = false
 			return
 		end
 
-		local progress = elapsed / duration
 		local eased
-
-		if progress < 0.7 then
-			eased = (progress / 0.7) * 0.85
+		if progress < 0.6 then
+			local t = progress / 0.6
+			eased = t * t * (3 - 2 * t)
+			eased = eased * 0.8
 		else
-			local slowPart = (progress - 0.7) / 0.3
-			eased = 0.85 + (1 - math.pow(1 - slowPart, 5)) * 0.15
+			local t = (progress - 0.6) / 0.4
+			local smoothT = 1 - math.pow(1 - t, 4)
+			eased = 0.8 + (smoothT * 0.2)
 		end
 
-		spinList.CanvasPosition = Vector2.new(eased * finalScroll, 0)
+		local currentScroll = eased * targetScrollX
+		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
 
 		if rollSoundInstance then
-			local speed = 1 - progress
-			rollSoundInstance.PlaybackSpeed = 0.5 + (speed * 1.5)
+			local speedMultiplier = 1 - (progress * 0.7)
+			rollSoundInstance.PlaybackSpeed = 0.4 + (speedMultiplier * 1.8)
 		end
 	end)
 end
