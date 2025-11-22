@@ -263,9 +263,9 @@ local function performSpin()
 
 	local itemWidth = targetChild.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local pickerCenterX = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2) - spinList.AbsolutePosition.X
-	local targetCenterX = (winningPosition - 0.5) * itemWidth
-	local finalScroll = targetCenterX - pickerCenterX
+	local targetItemCenter = (winningPosition - 0.5) * itemWidth
+	local pickerOffsetFromLeft = (picker.AbsolutePosition.X - spinContainer.AbsolutePosition.X) + (picker.AbsoluteSize.X / 2)
+	local finalScroll = targetItemCenter - pickerOffsetFromLeft
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
