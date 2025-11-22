@@ -21,6 +21,7 @@ local inventoryFrame = canvas:WaitForChild("Inventory")
 local spinningFrame = canvas:WaitForChild("SpinningFrame")
 local spinContainer = spinningFrame:WaitForChild("SpinContainer")
 local spinList = spinContainer:WaitForChild("List")
+local picker = spinContainer:WaitForChild("Picker")
 local spinActionButton = spinningFrame:WaitForChild("Spin")
 local list = inventoryFrame:WaitForChild("List")
 local chairTemplate = script:WaitForChild("ChairTemplate")
@@ -125,7 +126,7 @@ local function populateSpinList()
 	local models = seatModels:GetChildren()
 	local spinItems = {}
 
-	for i = 1, 30 do
+	for i = 1, 50 do
 		local randomModel = models[math.random(1, #models)]
 		table.insert(spinItems, randomModel)
 	end
@@ -138,64 +139,58 @@ local function populateSpinList()
 	spinList.CanvasPosition = Vector2.new(0, 0)
 end
 
+local function getItemUnderPicker()
+	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
+
+	for _, child in spinList:GetChildren() do
+		if child:IsA("GuiObject") and child.Visible then
+			local itemLeft = child.AbsolutePosition.X
+			local itemRight = itemLeft + child.AbsoluteSize.X
+
+			if pickerCenter >= itemLeft and pickerCenter <= itemRight then
+				return child:FindFirstChild("Name")
+			end
+		end
+	end
+
+	return nil
+end
+
 local function performSpin()
 	if isSpinning then return end
 	isSpinning = true
 
-	local wonSeat = rngModule:GetWeightedRandom()
-	if not wonSeat then
-		isSpinning = false
-		return
-	end
-
 	populateSpinList()
-	task.wait(0.2)
-
-	local targetIndex = 25
-	local winDisplay = createSpinDisplay(wonSeat)
-	winDisplay.Parent = spinList
-	winDisplay.LayoutOrder = targetIndex
-
 	task.wait(0.1)
 
-	local children = spinList:GetChildren()
-	local validChildren = {}
-	for _, child in ipairs(children) do
-		if child:IsA("GuiObject") and child.LayoutOrder == targetIndex then
-			table.insert(validChildren, child)
+	local duration = 5
+	local elapsed = 0
+	local maxScroll = spinList.AbsoluteCanvasSize.X - spinList.AbsoluteSize.X
+	local targetScroll = math.random(maxScroll * 0.6, maxScroll * 0.9)
+
+	local connection
+	connection = RunService.RenderStepped:Connect(function(dt)
+		elapsed = elapsed + dt
+
+		if elapsed >= duration then
+			connection:Disconnect()
+
+			local wonLabel = getItemUnderPicker()
+			if wonLabel then
+				print("Won seat:", wonLabel.Text)
+			end
+
+			task.wait(1)
+			isSpinning = false
+			return
 		end
-	end
 
-	if #validChildren == 0 then
-		isSpinning = false
-		return
-	end
+		local progress = elapsed / duration
+		local eased = 1 - math.pow(1 - progress, 5)
+		local currentScroll = eased * targetScroll
 
-	local targetChild = validChildren[1]
-	task.wait()
-
-	local itemSize = targetChild.AbsoluteSize.X
-	local centerOffset = spinList.AbsoluteSize.X / 2
-	local targetPositionX = targetChild.AbsolutePosition.X - spinList.AbsolutePosition.X
-	local finalPosition = targetPositionX - centerOffset + (itemSize / 2)
-
-	local tweenInfo = TweenInfo.new(
-		4,
-		Enum.EasingStyle.Quint,
-		Enum.EasingDirection.Out
-	)
-
-	local tween = TweenService:Create(spinList, tweenInfo, {
-		CanvasPosition = Vector2.new(finalPosition, 0)
-	})
-
-	tween:Play()
-	tween.Completed:Wait()
-
-	print("Won seat:", wonSeat.Name)
-	task.wait(1)
-
-	isSpinning = false
+		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
+	end)
 end
 
 local function toggleInventory()
