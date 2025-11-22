@@ -378,32 +378,9 @@ local function switchToOwned()
 	playSound(clickSound)
 	currentCategory = "Owned"
 
-	-- Fade out current items
-	for _, child in invList:GetChildren() do
-		if child:IsA("GuiObject") then
-			TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				GroupTransparency = 1
-			}):Play()
-		end
-	end
-
-	-- Wait for fade out, then update
-	task.wait(0.15)
+	-- Update immediately
 	updateInventory()
 	updateCategoryHighlight()
-
-	-- Staggered fade in for new items (polished effect)
-	local children = invList:GetChildren()
-	for i, child in children do
-		if child:IsA("GuiObject") then
-			child.GroupTransparency = 1
-			task.delay(i * 0.02, function()
-				TweenService:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					GroupTransparency = 0
-				}):Play()
-			end)
-		end
-	end
 end
 
 local function switchToIndex()
@@ -412,32 +389,9 @@ local function switchToIndex()
 	playSound(clickSound)
 	currentCategory = "Index"
 
-	-- Fade out current items
-	for _, child in invList:GetChildren() do
-		if child:IsA("GuiObject") then
-			TweenService:Create(child, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				GroupTransparency = 1
-			}):Play()
-		end
-	end
-
-	-- Wait for fade out, then update
-	task.wait(0.15)
+	-- Update immediately
 	updateInventory()
 	updateCategoryHighlight()
-
-	-- Staggered fade in for new items (polished effect)
-	local children = invList:GetChildren()
-	for i, child in children do
-		if child:IsA("GuiObject") then
-			child.GroupTransparency = 1
-			task.delay(i * 0.02, function()
-				TweenService:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-					GroupTransparency = 0
-				}):Play()
-			end)
-		end
-	end
 end
 
 --// UI Control
