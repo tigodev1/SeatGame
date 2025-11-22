@@ -135,7 +135,16 @@ local function attachChairToPlayer(player, chairName)
 	-- Position AnchorPart on ground at player's X,Z
 	anchorPart.CFrame = CFrame.new(playerPos.X, groundY, playerPos.Z) * CFrame.Angles(0, rotation, 0)
 
-	-- Weld the AnchorPart to player so chair follows movement
+	-- Wait for physics to update
+	task.wait()
+
+	-- Position player at the seat's position BEFORE welding
+	humanoidRootPart.CFrame = seatPart.CFrame
+
+	-- Wait a moment for position to settle
+	task.wait(0.05)
+
+	-- NOW weld the AnchorPart to player (after both are in correct positions)
 	local weld = Instance.new("Weld")
 	weld.Name = "ChairToPlayerWeld"
 	weld.Part0 = humanoidRootPart
@@ -143,13 +152,6 @@ local function attachChairToPlayer(player, chairName)
 	weld.C0 = humanoidRootPart.CFrame:ToObjectSpace(anchorPart.CFrame)
 	weld.C1 = CFrame.new()
 	weld.Parent = anchorPart
-
-	-- Wait a moment then position player roughly where seat is
-	task.wait(0.1)
-
-	-- Position player at the seat's position (roughly)
-	local seatPos = seatPart.Position
-	humanoidRootPart.CFrame = CFrame.new(seatPos.X, seatPos.Y, seatPos.Z) * CFrame.Angles(0, rotation, 0)
 
 	-- Play sitting animation
 	task.wait(0.1)
