@@ -242,43 +242,24 @@ local function performSpin()
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.5)
+	task.wait(0.3)
 
-	local uiListLayout = spinList:FindFirstChildOfClass("UIListLayout")
-	if uiListLayout then
-		uiListLayout:ApplyLayout()
-	end
-	task.wait(0.1)
-
-	local allItems = {}
-	for _, child in spinList:GetChildren() do
-		if child:IsA("GuiObject") and child.Name:match("SpinItem") then
-			table.insert(allItems, child)
-		end
-	end
-
-	table.sort(allItems, function(a, b)
-		return a.LayoutOrder < b.LayoutOrder
-	end)
-
-	if #allItems == 0 then
+	local firstItem = spinList:FindFirstChild("SpinItem_1")
+	if not firstItem then
 		isSpinning = false
 		return
 	end
 
-	local itemWidth = allItems[1].AbsoluteSize.X
-	local spacing = uiListLayout and uiListLayout.Padding.Offset or 0
-	local totalItemWidth = itemWidth + spacing
-
+	local itemWidth = firstItem.AbsoluteSize.X
 	local containerCenter = spinContainer.AbsoluteSize.X / 2
-	local targetScrollX = ((winningIndex - 1) * totalItemWidth) - containerCenter + (itemWidth / 2)
+	local targetScrollX = ((winningIndex - 1) * itemWidth) - containerCenter + (itemWidth / 2)
 
 	rollSoundInstance = rollSound:Clone()
 	rollSoundInstance.Parent = SoundService
 	rollSoundInstance.Looped = true
 	rollSoundInstance:Play()
 
-	local spinDuration = 6
+	local spinDuration = 4
 	local startTime = os.clock()
 
 	local connection
@@ -297,28 +278,25 @@ local function performSpin()
 			end
 
 			print("Won seat:", wonSeat.Name)
-			task.wait(2)
+			task.wait(1.5)
 			isSpinning = false
 			return
 		end
 
 		local eased
-		if progress < 0.6 then
-			local t = progress / 0.6
-			eased = t * t * (3 - 2 * t)
-			eased = eased * 0.8
+		if progress < 0.7 then
+			local t = progress / 0.7
+			eased = t * t * (3 - 2 * t) * 0.85
 		else
-			local t = (progress - 0.6) / 0.4
-			local smoothT = 1 - math.pow(1 - t, 4)
-			eased = 0.8 + (smoothT * 0.2)
+			local t = (progress - 0.7) / 0.3
+			eased = 0.85 + ((1 - math.pow(1 - t, 4)) * 0.15)
 		end
 
-		local currentScroll = eased * targetScrollX
-		spinList.CanvasPosition = Vector2.new(currentScroll, 0)
+		spinList.CanvasPosition = Vector2.new(eased * targetScrollX, 0)
 
 		if rollSoundInstance then
-			local speedMultiplier = 1 - (progress * 0.7)
-			rollSoundInstance.PlaybackSpeed = 0.4 + (speedMultiplier * 1.8)
+			local currentSpeed = 2.0 - (eased * 1.6)
+			rollSoundInstance.PlaybackSpeed = math.max(0.4, currentSpeed)
 		end
 	end)
 end
