@@ -161,10 +161,17 @@ local function createChair(model, owned)
 	local name = item:FindFirstChild("Name")
 	if name then name.Text = model.Name end
 
-	-- Remove rarity border completely
+	-- Remove all outlines/borders completely
 	local rarity = item:FindFirstChild("Rarity")
 	if rarity then
 		rarity:Destroy()
+	end
+
+	-- Remove all UIStrokes (outlines)
+	for _, descendant in item:GetDescendants() do
+		if descendant:IsA("UIStroke") then
+			descendant:Destroy()
+		end
 	end
 
 	-- Setup equip button based on category
@@ -335,10 +342,6 @@ local function switchToOwned()
 	playSound(clickSound)
 	currentCategory = "Owned"
 
-	-- Update button appearances
-	ownedButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-	indexButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-
 	updateInventory()
 end
 
@@ -347,10 +350,6 @@ local function switchToIndex()
 
 	playSound(clickSound)
 	currentCategory = "Index"
-
-	-- Update button appearances
-	ownedButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-	indexButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
 
 	updateInventory()
 end
@@ -443,10 +442,6 @@ function UIController:KnitInit()
 	setupButton(spinClose)
 	setupButton(ownedButton)
 	setupButton(indexButton)
-
-	-- Set initial category button colors
-	ownedButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-	indexButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 
 	invButton.MouseButton1Click:Connect(toggleInv)
 	spinButton.MouseButton1Click:Connect(toggleSpin)
