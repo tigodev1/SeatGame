@@ -222,28 +222,13 @@ updateInventory = function()
 	end
 
 	-- Get equipped chair from server (using Knit)
-	local success, result = pcall(function()
-		return DataService:GetEquippedChair():await()
-	end)
-
-	if success and result then
-		equippedChair = result
+	local equippedResult = DataService:GetEquippedChair():await()
+	if equippedResult then
+		equippedChair = equippedResult
 	end
 
 	-- Get owned chairs list
-	local owned = {}
-	local ownedSuccess, ownedResult = pcall(function()
-		return DataService:GetOwnedChairs():await()
-	end)
-
-	if ownedSuccess and ownedResult then
-		owned = ownedResult
-		print("[Inventory] Got owned chairs:", owned)
-		print("[Inventory] Owned count:", #owned)
-	else
-		warn("[Inventory] Failed to get owned chairs:", ownedResult)
-		owned = {"Default"} -- Fallback to just Default
-	end
+	local owned = DataService:GetOwnedChairs():await() or {"Default"}
 
 	-- Sort chairs: equipped first, then by name
 	local chairList = {}
@@ -253,7 +238,6 @@ updateInventory = function()
 			for _, model in folder:GetChildren() do
 				if model:IsA("Model") then
 					local has = table.find(owned, model.Name) ~= nil
-					print(string.format("[Inventory] Chair '%s': owned = %s", model.Name, tostring(has)))
 					table.insert(chairList, {model = model, owned = has})
 				end
 			end
