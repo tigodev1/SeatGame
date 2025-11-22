@@ -43,6 +43,10 @@ local isSpinning = false
 local buttonSizes = {}
 local rollSoundInstance = nil
 
+--// Config
+local SPIN_DURATION = 4
+local SLOWDOWN_TIME = 1
+
 --// Sound System
 local function playSound(sound)
 	local clone = sound:Clone()
@@ -261,15 +265,15 @@ local function performSpin()
 	rollSoundInstance.Looped = true
 	rollSoundInstance:Play()
 
-	local spinDuration = 4
 	local startTime = os.clock()
+	local slowdownStart = SPIN_DURATION - SLOWDOWN_TIME
+	local normalSpeed = 0.9
 
 	local connection
 	connection = RunService.Heartbeat:Connect(function()
 		local elapsed = os.clock() - startTime
-		local progress = math.min(elapsed / spinDuration, 1)
 
-		if progress >= 1 then
+		if elapsed >= SPIN_DURATION then
 			connection:Disconnect()
 			spinList.CanvasPosition = Vector2.new(targetScrollX, 0)
 
@@ -286,19 +290,20 @@ local function performSpin()
 		end
 
 		local eased
-		if progress < 0.5 then
-			local t = progress / 0.5
-			eased = t * t * (3 - 2 * t) * 0.7
+		if elapsed < slowdownStart then
+			local normalProgress = elapsed / slowdownStart
+			eased = normalProgress * normalSpeed
 		else
-			local t = (progress - 0.5) / 0.5
-			eased = 0.7 + ((1 - math.pow(1 - t, 3)) * 0.3)
+			local slowdownProgress = (elapsed - slowdownStart) / SLOWDOWN_TIME
+			local slowdownEased = 1 - math.pow(1 - slowdownProgress, 3)
+			eased = normalSpeed + (slowdownEased * (1 - normalSpeed))
 		end
 
 		spinList.CanvasPosition = Vector2.new(eased * targetScrollX, 0)
 
 		if rollSoundInstance then
-			local currentSpeed = 2.5 - (progress * 2.1)
-			rollSoundInstance.PlaybackSpeed = math.max(0.4, currentSpeed)
+			local speed = (elapsed < slowdownStart) and 1.5 or (1.5 - ((elapsed - slowdownStart) / SLOWDOWN_TIME) * 1.1)
+			rollSoundInstance.PlaybackSpeed = math.max(0.4, speed)
 		end
 	end)
 end
