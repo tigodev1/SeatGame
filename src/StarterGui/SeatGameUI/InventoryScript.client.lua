@@ -343,29 +343,14 @@ local function performSpin()
 			return
 		end
 
-		local timeRemaining = SPIN_DURATION - elapsed
 		local progress = elapsed / SPIN_DURATION
-		local scrollProgress
-
-		if timeRemaining > SLOWDOWN_TIME then
-			scrollProgress = progress
-		else
-			local slowdownRatio = SLOWDOWN_TIME / SPIN_DURATION
-			local beforeSlowdown = 1 - slowdownRatio
-			local slowdownProgress = (progress - beforeSlowdown) / slowdownRatio
-			local slowdownEase = 1 - math.pow(1 - slowdownProgress, 4)
-			scrollProgress = beforeSlowdown + (slowdownEase * slowdownRatio)
-		end
+		local scrollProgress = 1 - math.pow(1 - progress, 3)
 
 		spinList.CanvasPosition = Vector2.new(scrollProgress * targetScroll, 0)
 
 		if rollSoundInstance then
-			if timeRemaining > SLOWDOWN_TIME then
-				rollSoundInstance.PlaybackSpeed = 2.0
-			else
-				local slowdownProgress = (SLOWDOWN_TIME - timeRemaining) / SLOWDOWN_TIME
-				rollSoundInstance.PlaybackSpeed = 2.0 - (slowdownProgress * 1.8)
-			end
+			local speed = 2.0 - (scrollProgress * 1.85)
+			rollSoundInstance.PlaybackSpeed = math.max(0.15, speed)
 		end
 	end)
 end
