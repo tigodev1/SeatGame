@@ -93,45 +93,48 @@ local function attachChairToPlayer(player, chairName)
 		return
 	end
 
-	-- CRITICAL: Ensure AnchorPart is unanchored FIRST
-	anchorPart.Anchored = false
-	anchorPart.CanCollide = false
-	anchorPart.Massless = true
-
-	-- Configure all parts in the chair
-	for _, part in chairClone:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.Anchored = false
-			part.CanCollide = false
-			part.Massless = true
-			part.CollisionGroup = "PlayerChair"
-			pcall(function()
-				part:SetNetworkOwner(player)
-			end)
+	-- CRITICAL: Configure ALL parts - iterate multiple times to ensure everything is set
+	-- First pass: Get all BaseParts including those in nested models
+	local allParts = {}
+	for _, obj in chairClone:GetDescendants() do
+		if obj:IsA("BasePart") then
+			table.insert(allParts, obj)
 		end
 	end
 
-	-- Weld all chair parts to AnchorPart
-	for _, part in chairClone:GetDescendants() do
-		if part:IsA("BasePart") and part ~= anchorPart then
+	-- Add the direct children too
+	for _, obj in chairClone:GetChildren() do
+		if obj:IsA("BasePart") then
+			table.insert(allParts, obj)
+		end
+	end
+
+	-- Configure EVERY part with collision disabled
+	for _, part in allParts do
+		part.Anchored = false
+		part.CanCollide = false
+		part.Massless = true
+		part.CollisionGroup = "PlayerChair"
+		pcall(function()
+			part:SetNetworkOwner(player)
+		end)
+	end
+
+	-- Explicitly set AnchorPart and Seat
+	anchorPart.Anchored = false
+	anchorPart.CanCollide = false
+	anchorPart.Massless = true
+	seatPart.Anchored = false
+	seatPart.CanCollide = false
+	seatPart.Massless = true
+
+	-- Weld all parts to AnchorPart
+	for _, part in allParts do
+		if part ~= anchorPart then
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = anchorPart
 			weld.Part1 = part
 			weld.Parent = part
-		end
-	end
-
-	-- Disable collision between chair and player
-	for _, part in character:GetDescendants() do
-		if part:IsA("BasePart") then
-			for _, chairPart in chairClone:GetDescendants() do
-				if chairPart:IsA("BasePart") then
-					local noCollision = Instance.new("NoCollisionConstraint")
-					noCollision.Part0 = part
-					noCollision.Part1 = chairPart
-					noCollision.Parent = chairClone
-				end
-			end
 		end
 	end
 
