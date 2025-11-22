@@ -248,4 +248,8 @@ spin:Init({
 	dataRemote = data
 })
 
-print("[UI] Ready")
+print("✓ UI Client Initialized", {
+	Buttons = "Inventory, Spin",
+	Animations = "Button hover/press effects",
+	Viewports = "3D seat previews with rotation"
+})

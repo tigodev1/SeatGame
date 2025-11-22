@@ -149,3 +149,9 @@ Players.PlayerRemoving:Connect(onPlayerRemoving)
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(onPlayerAdded, player)
 end
+
+print("✓ SeatMain Initialized", {
+	SeatPositions = #SeatsPlacing:GetChildren(),
+	SeatModels = #SeatModels:GetChildren(),
+	AutoSeating = "Enabled"
+})
