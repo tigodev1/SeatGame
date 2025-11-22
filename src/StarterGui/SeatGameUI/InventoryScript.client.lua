@@ -161,16 +161,15 @@ local function performSpin()
 	end
 
 	local models = seatModels:GetChildren()
-	local selectedSeats = {}
+	local winningPosition = 28
+	local itemCount = 0
 
-	for i = 1, 10 do
-		selectedSeats[i] = models[math.random(1, #models)]
-	end
-
-	local winningIndex = 28
 	for loop = 1, 4 do
-		for i, model in ipairs(selectedSeats) do
-			local display = createSpinDisplay(loop == 3 and i == 8 and wonSeat or model)
+		for i = 1, 10 do
+			itemCount = itemCount + 1
+			local modelToUse = itemCount == winningPosition and wonSeat or models[math.random(1, #models)]
+			local display = createSpinDisplay(modelToUse)
+			display.LayoutOrder = itemCount
 			display.Parent = spinList
 		end
 		if loop < 4 then
@@ -179,12 +178,11 @@ local function performSpin()
 	end
 
 	spinList.CanvasPosition = Vector2.new(0, 0)
-	task.wait(0.2)
+	task.wait(0.3)
 
-	local children = spinList:GetChildren()
-	local targetChild
-	for _, child in ipairs(children) do
-		if child:IsA("GuiObject") and child.LayoutOrder == winningIndex then
+	local targetChild = nil
+	for _, child in spinList:GetChildren() do
+		if child:IsA("GuiObject") and child.LayoutOrder == winningPosition then
 			targetChild = child
 			break
 		end
@@ -195,31 +193,40 @@ local function performSpin()
 		return
 	end
 
-	task.wait(0.1)
+	task.wait(0.2)
 
-	local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
-	local targetCenter = targetChild.AbsolutePosition.X + (targetChild.AbsoluteSize.X / 2)
-	local targetScroll = targetCenter - pickerCenter
+	local itemWidth = targetChild.AbsoluteSize.X
+	local containerWidth = spinContainer.AbsoluteSize.X
+	local targetPosition = (winningPosition - 1) * itemWidth
+	local finalScroll = targetPosition - (containerWidth / 2) + (itemWidth / 2)
 
-	local duration = 4.5
-	local elapsed = 0
+	local duration = 5
+	local startTime = tick()
 
 	local connection
-	connection = RunService.RenderStepped:Connect(function(dt)
-		elapsed = elapsed + dt
+	connection = RunService.RenderStepped:Connect(function()
+		local elapsed = tick() - startTime
 
 		if elapsed >= duration then
 			connection:Disconnect()
+			spinList.CanvasPosition = Vector2.new(finalScroll, 0)
 			print("Won seat:", wonSeat.Name)
 			task.wait(1)
 			isSpinning = false
 			return
 		end
 
-		local t = elapsed / duration
-		local eased = t < 0.75 and (t / 0.75) * 0.9 or 0.9 + (1 - math.pow(1 - (t - 0.75) / 0.25, 6)) * 0.1
+		local progress = elapsed / duration
+		local eased
 
-		spinList.CanvasPosition = Vector2.new(eased * targetScroll, 0)
+		if progress < 0.7 then
+			eased = (progress / 0.7) * 0.85
+		else
+			local slowPart = (progress - 0.7) / 0.3
+			eased = 0.85 + (1 - math.pow(1 - slowPart, 5)) * 0.15
+		end
+
+		spinList.CanvasPosition = Vector2.new(eased * finalScroll, 0)
 	end)
 end
 
