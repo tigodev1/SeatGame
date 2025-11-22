@@ -50,10 +50,14 @@ local function setupChairInViewport(viewport, chairModel, rotating)
 
 	local cframe, size = clone:GetBoundingBox()
 	local maxSize = math.max(size.X, size.Y, size.Z)
-	local distance = maxSize * 1.8
 
-	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance * 0.4, distance))
+	local fov = math.rad(70)
+	local aspectRatio = viewport.AbsoluteSize.X / viewport.AbsoluteSize.Y
+	local distance = (maxSize / math.tan(fov / 2)) * 0.7
+
+	camera.CFrame = CFrame.new(cframe.Position + Vector3.new(distance, distance * 0.35, distance))
 	camera.CFrame = CFrame.lookAt(camera.CFrame.Position, cframe.Position)
+	camera.FieldOfView = 70
 
 	if rotating then
 		local angle = 0
