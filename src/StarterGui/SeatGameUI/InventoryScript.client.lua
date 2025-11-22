@@ -282,23 +282,20 @@ local function performSpin()
 	local models = seatModels:GetChildren()
 
 	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
-		if wonSeatName then
-			playSound(rewardSound)
-			local success = dataRemote:InvokeServer("UnlockChair", wonSeatName)
-			if success then
-				print("Unlocked new seat:", wonSeatName)
-			else
-				print("Already owned:", wonSeatName)
-			end
-		end
-
-		task.wait(1)
 		isSpinning = false
 		spinActionButton.Active = true
 		spinActionButton.Text = "SPIN"
-		TweenService:Create(spinActionButton, TweenInfo.new(0.2), {
+		TweenService:Create(spinActionButton, TweenInfo.new(0.15), {
 			BackgroundTransparency = 0
 		}):Play()
+
+		if wonSeatName then
+			playSound(rewardSound)
+			task.spawn(function()
+				dataRemote:InvokeServer("UnlockChair", wonSeatName)
+			end)
+		end
+
 		startIdleRoll()
 	end)
 end
