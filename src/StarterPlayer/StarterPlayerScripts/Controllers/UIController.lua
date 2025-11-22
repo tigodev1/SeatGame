@@ -29,13 +29,16 @@ local invButton = nil
 local spinButton = nil
 local invFrame = nil
 local invClose = nil
+local ownedButton = nil
+local indexButton = nil
+local invList = nil
+local invGridLayout = nil
 local spinFrame = nil
 local spinClose = nil
 local spinContainer = nil
 local spinList = nil
 local picker = nil
 local spinAction = nil
-local invList = nil
 local chairTemplate = nil
 local spinTemplate = nil
 
@@ -54,6 +57,7 @@ local spin = nil
 local invOpen = false
 local buttonSizes = {}
 local equippedChair = "Default"
+local currentCategory = "Owned" -- "Owned" or "Index"
 
 -- Forward declarations
 local updateInventory
@@ -123,6 +127,11 @@ local function setupViewport(vp, model, rotate, owned)
 				part.Color = Color3.fromRGB(20, 20, 20)
 			end
 		end
+
+		-- Add blur effect for unowned chairs
+		local blur = Instance.new("BlurEffect")
+		blur.Size = 10
+		blur.Parent = cam
 	end
 
 	local cf, size = clone:GetBoundingBox()
@@ -152,42 +161,41 @@ local function createChair(model, owned)
 	local name = item:FindFirstChild("Name")
 	if name then name.Text = model.Name end
 
-	-- Show rarity border (only if owned)
+	-- Remove rarity border completely
 	local rarity = item:FindFirstChild("Rarity")
-	if rarity and owned then
-		local r = rng:GetSeatRarity(model)
-		rarity.BackgroundColor3 = rng:GetRarityColor(r)
-	elseif rarity then
-		-- Locked chairs have gray border
-		rarity.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	if rarity then
+		rarity:Destroy()
 	end
 
-	-- Setup equip button (show for all chairs, but only clickable if owned)
+	-- Setup equip button based on category
 	local equipBtn = item:FindFirstChild("Equip")
 	if equipBtn then
-		if owned then
-			local isEquipped = equippedChair == model.Name
+		if currentCategory == "Owned" then
+			-- In Owned category, only show button if chair is owned
+			if owned then
+				local isEquipped = equippedChair == model.Name
 
-			equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
-			equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
-			equipBtn.Visible = true
+				equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
+				equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
+				equipBtn.Visible = true
 
-			setupButton(equipBtn)
+				setupButton(equipBtn)
 
-			equipBtn.MouseButton1Click:Connect(function()
-				playSound(clickSound)
+				equipBtn.MouseButton1Click:Connect(function()
+					playSound(clickSound)
 
-				if equippedChair == model.Name then
-					unequipChair()
-				else
-					equipChair(model.Name)
-				end
-			end)
+					if equippedChair == model.Name then
+						unequipChair()
+					else
+						equipChair(model.Name)
+					end
+				end)
+			else
+				equipBtn.Visible = false
+			end
 		else
-			-- Show locked button
-			equipBtn.Text = "LOCKED"
-			equipBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-			equipBtn.Visible = true
+			-- In Index category, hide equip button completely
+			equipBtn.Visible = false
 		end
 	end
 
@@ -221,6 +229,15 @@ updateInventory = function()
 		end
 	end
 
+	-- Set CellPadding based on category
+	if invGridLayout then
+		if currentCategory == "Owned" then
+			invGridLayout.CellPadding = UDim2.new(0, 15, 0, 50)
+		else
+			invGridLayout.CellPadding = UDim2.new(0, 15, 0, 15)
+		end
+	end
+
 	-- Get equipped chair from server (using Knit)
 	local success, equippedResult = pcall(function()
 		return DataService:GetEquippedChair():expect()
@@ -238,32 +255,45 @@ updateInventory = function()
 		owned = ownedResult
 	end
 
-	-- Sort chairs: equipped first, then by name
+	-- Collect all chairs
 	local chairList = {}
-	-- Iterate through all rarity folders to get all chair models
 	for _, folder in seats:GetChildren() do
 		if folder:IsA("Folder") then
 			for _, model in folder:GetChildren() do
 				if model:IsA("Model") then
 					local has = table.find(owned, model.Name) ~= nil
-					table.insert(chairList, {model = model, owned = has})
+
+					-- Filter based on category
+					if currentCategory == "Owned" then
+						-- Only show owned chairs
+						if has then
+							table.insert(chairList, {model = model, owned = has})
+						end
+					else
+						-- Show all chairs in Index
+						table.insert(chairList, {model = model, owned = has})
+					end
 				end
 			end
 		end
 	end
 
+	-- Sort chairs
 	table.sort(chairList, function(a, b)
-		local aEquipped = a.model.Name == equippedChair
-		local bEquipped = b.model.Name == equippedChair
+		if currentCategory == "Owned" then
+			-- In Owned: equipped first, then alphabetically
+			local aEquipped = a.model.Name == equippedChair
+			local bEquipped = b.model.Name == equippedChair
 
-		if aEquipped ~= bEquipped then
-			return aEquipped -- Equipped chair goes first
+			if aEquipped ~= bEquipped then
+				return aEquipped
+			end
 		end
 
-		return a.model.Name < b.model.Name -- Then sort alphabetically
+		return a.model.Name < b.model.Name
 	end)
 
-	-- Create chair items in sorted order
+	-- Create chair items
 	for _, entry in ipairs(chairList) do
 		createChair(entry.model, entry.owned)
 	end
@@ -295,6 +325,33 @@ unequipChair = function()
 	end)
 
 	-- Update all chair buttons
+	updateInventory()
+end
+
+--// Category Switching
+local function switchToOwned()
+	if currentCategory == "Owned" then return end
+
+	playSound(clickSound)
+	currentCategory = "Owned"
+
+	-- Update button appearances
+	ownedButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+	indexButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+
+	updateInventory()
+end
+
+local function switchToIndex()
+	if currentCategory == "Index" then return end
+
+	playSound(clickSound)
+	currentCategory = "Index"
+
+	-- Update button appearances
+	ownedButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	indexButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+
 	updateInventory()
 end
 
@@ -348,13 +405,16 @@ function UIController:KnitInit()
 	spinButton = buttons:WaitForChild("SpinButton")
 	invFrame = canvas:WaitForChild("Inventory")
 	invClose = invFrame:WaitForChild("CloseButton")
+	ownedButton = invFrame:WaitForChild("Owned")
+	indexButton = invFrame:WaitForChild("Index")
+	invList = invFrame:WaitForChild("List")
+	invGridLayout = invList:FindFirstChildOfClass("UIGridLayout")
 	spinFrame = canvas:WaitForChild("SpinningFrame")
 	spinClose = spinFrame:WaitForChild("CloseButton")
 	spinContainer = spinFrame:WaitForChild("SpinContainer")
 	spinList = spinContainer:WaitForChild("List")
 	picker = spinContainer:WaitForChild("Picker")
 	spinAction = spinFrame:WaitForChild("Spin")
-	invList = invFrame:WaitForChild("List")
 
 	-- Get templates from StarterPlayerScripts/Templates
 	local templatesFolder = script.Parent.Parent:WaitForChild("Templates")
@@ -381,6 +441,12 @@ function UIController:KnitInit()
 	setupButton(spinAction)
 	setupButton(invClose)
 	setupButton(spinClose)
+	setupButton(ownedButton)
+	setupButton(indexButton)
+
+	-- Set initial category button colors
+	ownedButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+	indexButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 
 	invButton.MouseButton1Click:Connect(toggleInv)
 	spinButton.MouseButton1Click:Connect(toggleSpin)
@@ -392,6 +458,9 @@ function UIController:KnitInit()
 		playSound(clickSound)
 		hide(spinFrame)
 	end)
+
+	ownedButton.MouseButton1Click:Connect(switchToOwned)
+	indexButton.MouseButton1Click:Connect(switchToIndex)
 end
 
 function UIController:KnitStart()
