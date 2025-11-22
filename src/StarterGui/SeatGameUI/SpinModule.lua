@@ -255,7 +255,7 @@ local function executeSpin()
 	-- Increment rolls stat
 	task.spawn(function()
 		pcall(function()
-			config.data:InvokeServer("IncrementRolls")
+			config.data:IncrementRolls()
 		end)
 	end)
 
@@ -298,7 +298,7 @@ local function executeSpin()
 	if winnerName then
 		task.spawn(function()
 			pcall(function()
-				config.data:InvokeServer("UnlockChair", winnerName)
+				config.data:UnlockChair(winnerName)
 			end)
 		end)
 	end
@@ -327,7 +327,7 @@ function SpinModule:Init(cfg)
 	assert(cfg.models, "Missing models")
 	assert(cfg.rngModule, "Missing rngModule")
 	assert(cfg.createDisplayFunc, "Missing createDisplayFunc")
-	assert(cfg.dataRemote, "Missing dataRemote")
+	assert(cfg.dataService, "Missing dataService")
 
 	config = {
 		list = cfg.spinList,
@@ -339,7 +339,7 @@ function SpinModule:Init(cfg)
 		rewardSound = cfg.rewardSound,
 		rng = cfg.rngModule,
 		makeDisplay = cfg.createDisplayFunc,
-		data = cfg.dataRemote
+		data = cfg.dataService
 	}
 
 	-- Create initial preview items

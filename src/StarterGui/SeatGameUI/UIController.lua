@@ -1,0 +1,401 @@
+--[[
+	UIController - Manages the seat game UI
+	Handles inventory display, equipping chairs, and spinning
+--]]
+
+--// Services
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+
+--// Knit
+local Knit = require(ReplicatedStorage.Packages.Knit)
+
+--// Create Controller
+local UIController = Knit.CreateController {
+	Name = "UIController",
+}
+
+--// References
+local DataService = nil -- Will be set in KnitStart
+
+-- UI elements (will be initialized in KnitInit)
+local gui = nil
+local canvas = nil
+local buttons = nil
+local invButton = nil
+local spinButton = nil
+local invFrame = nil
+local invClose = nil
+local spinFrame = nil
+local spinClose = nil
+local spinContainer = nil
+local spinList = nil
+local picker = nil
+local spinAction = nil
+local invList = nil
+local chairTemplate = nil
+local spinTemplate = nil
+
+-- Game elements
+local game = nil
+local seats = nil
+local sounds = nil
+local hoverSound = nil
+local clickSound = nil
+local rollSound = nil
+local rewardSound = nil
+local rng = nil
+local spin = nil
+
+--// State
+local invOpen = false
+local buttonSizes = {}
+local equippedChair = "Default"
+
+-- Forward declarations
+local updateInventory
+local equipChair
+local unequipChair
+
+--// Utils
+local function playSound(sound)
+	local s = sound:Clone()
+	s.Parent = SoundService
+	s:Play()
+	task.delay(sound.TimeLength, function() s:Destroy() end)
+end
+
+local function scale(udim, s)
+	return UDim2.new(udim.X.Scale * s, udim.X.Offset * s, udim.Y.Scale * s, udim.Y.Offset * s)
+end
+
+local function show(frame)
+	frame.Visible = true
+end
+
+local function hide(frame)
+	frame.Visible = false
+end
+
+--// Button Animations
+local function setupButton(btn)
+	btn.Active = true
+	buttonSizes[btn] = btn.Size
+	local info = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	btn.MouseEnter:Connect(function()
+		playSound(hoverSound)
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
+	end)
+
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn, info, {Size = buttonSizes[btn]}):Play()
+	end)
+
+	btn.MouseButton1Down:Connect(function()
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 0.95)}):Play()
+	end)
+
+	btn.MouseButton1Up:Connect(function()
+		TweenService:Create(btn, info, {Size = scale(buttonSizes[btn], 1.05)}):Play()
+	end)
+end
+
+--// Viewport
+local function createCamera(vp)
+	local cam = Instance.new("Camera")
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	return cam
+end
+
+local function setupViewport(vp, model, rotate, owned)
+	local cam = createCamera(vp)
+	local clone = model:Clone()
+	clone.Parent = vp
+
+	if not owned then
+		for _, part in clone:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.Color = Color3.fromRGB(20, 20, 20)
+			end
+		end
+	end
+
+	local cf, size = clone:GetBoundingBox()
+	local dist = math.max(size.X, size.Y, size.Z) * 1.0
+	cam.CFrame = CFrame.new(cf.Position + Vector3.new(dist, dist * 0.3, dist))
+	cam.CFrame = CFrame.lookAt(cam.CFrame.Position, cf.Position)
+
+	if rotate then
+		local angle = 0
+		RunService.RenderStepped:Connect(function(dt)
+			if clone and clone.Parent then
+				angle = angle + (dt * 50)
+				clone:PivotTo(CFrame.new(cf.Position) * CFrame.Angles(0, math.rad(angle), 0))
+			end
+		end)
+	end
+end
+
+--// Displays
+local function createChair(model, owned)
+	local item = chairTemplate:Clone()
+	item.Visible = true
+
+	local vp = item:FindFirstChild("ViewportFrame")
+	if vp then setupViewport(vp, model, true, owned) end
+
+	local name = item:FindFirstChild("Name")
+	if name then name.Text = model.Name end
+
+	-- Setup equip button
+	local equipBtn = item:FindFirstChild("Equip")
+	if equipBtn and owned then
+		local isEquipped = equippedChair == model.Name
+
+		equipBtn.Text = isEquipped and "UNEQUIP" or "EQUIP"
+		equipBtn.BackgroundColor3 = isEquipped and Color3.fromRGB(200, 50, 50) or Color3.fromRGB(50, 200, 50)
+		equipBtn.Visible = true
+
+		setupButton(equipBtn)
+
+		equipBtn.MouseButton1Click:Connect(function()
+			playSound(clickSound)
+
+			if equippedChair == model.Name then
+				unequipChair()
+			else
+				equipChair(model.Name)
+			end
+		end)
+	elseif equipBtn then
+		equipBtn.Visible = false
+	end
+
+	item.Parent = invList
+end
+
+local function createSpin(model, rngMod)
+	local item = spinTemplate:Clone()
+	item.Visible = true
+
+	local vp = item:FindFirstChild("ViewportFrame")
+	if vp then setupViewport(vp, model, false, true) end
+
+	local name = item:FindFirstChild("Name")
+	if name then name.Text = model.Name end
+
+	local rarity = item:FindFirstChild("Rarity")
+	if rarity then
+		local r = rngMod:GetSeatRarity(model)
+		rarity.BackgroundColor3 = rngMod:GetRarityColor(r)
+	end
+
+	return item
+end
+
+--// Inventory
+updateInventory = function()
+	for _, child in invList:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+
+	-- Get equipped chair from server (using Knit)
+	local success, result = pcall(function()
+		return DataService:GetEquippedChair()
+	end)
+
+	if success and result then
+		equippedChair = result
+	end
+
+	local owned = DataService:GetOwnedChairs()
+
+	-- Sort chairs: equipped first, then by name
+	local chairList = {}
+	-- Iterate through all rarity folders to get all chair models
+	for _, folder in seats:GetChildren() do
+		if folder:IsA("Folder") then
+			for _, model in folder:GetChildren() do
+				if model:IsA("Model") then
+					local has = table.find(owned, model.Name) ~= nil
+					table.insert(chairList, {model = model, owned = has})
+				end
+			end
+		end
+	end
+
+	table.sort(chairList, function(a, b)
+		local aEquipped = a.model.Name == equippedChair
+		local bEquipped = b.model.Name == equippedChair
+
+		if aEquipped ~= bEquipped then
+			return aEquipped -- Equipped chair goes first
+		end
+
+		return a.model.Name < b.model.Name -- Then sort alphabetically
+	end)
+
+	-- Create chair items in sorted order
+	for _, entry in ipairs(chairList) do
+		createChair(entry.model, entry.owned)
+	end
+end
+
+--// Equip/Unequip
+equipChair = function(chairName)
+	equippedChair = chairName
+
+	-- Save to server and update the physical chair (using Knit)
+	task.spawn(function()
+		pcall(function()
+			DataService:SetEquippedChair(chairName)
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
+end
+
+unequipChair = function()
+	equippedChair = "Default"
+
+	-- Save to server and update the physical chair (using Knit)
+	task.spawn(function()
+		pcall(function()
+			DataService:SetEquippedChair("Default")
+		end)
+	end)
+
+	-- Update all chair buttons
+	updateInventory()
+end
+
+--// UI Control
+local function closeInv()
+	invOpen = false
+	hide(invFrame)
+end
+
+local function toggleInv()
+	playSound(clickSound)
+	invOpen = not invOpen
+
+	if invOpen then
+		show(invFrame)
+		updateInventory()
+		if spinFrame.Visible then hide(spinFrame) end
+	else
+		hide(invFrame)
+	end
+end
+
+local function toggleSpin()
+	playSound(clickSound)
+	local vis = spinFrame.Visible
+
+	if not vis then
+		show(spinFrame)
+		if invFrame.Visible then hide(invFrame) end
+	else
+		hide(spinFrame)
+	end
+end
+
+--// Knit Lifecycle
+function UIController:KnitInit()
+	-- Disable reset button
+	task.spawn(function()
+		pcall(function()
+			StarterGui:SetCore("ResetButtonCallback", false)
+		end)
+	end)
+
+	-- Get UI references (wait for them to replicate)
+	local player = game:GetService("Players").LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui")
+	gui = playerGui:WaitForChild("SeatGameUI")
+	canvas = gui:WaitForChild("Canvas")
+	buttons = canvas:WaitForChild("ButtonContainer")
+	invButton = buttons:WaitForChild("InventoryButton")
+	spinButton = buttons:WaitForChild("SpinButton")
+	invFrame = canvas:WaitForChild("Inventory")
+	invClose = invFrame:WaitForChild("CloseButton")
+	spinFrame = canvas:WaitForChild("SpinningFrame")
+	spinClose = spinFrame:WaitForChild("CloseButton")
+	spinContainer = spinFrame:WaitForChild("SpinContainer")
+	spinList = spinContainer:WaitForChild("List")
+	picker = spinContainer:WaitForChild("Picker")
+	spinAction = spinFrame:WaitForChild("Spin")
+	invList = invFrame:WaitForChild("List")
+
+	-- Get templates from the original script location
+	local scriptParent = playerGui.SeatGameUI:WaitForChild("InventoryScript")
+	chairTemplate = scriptParent:WaitForChild("ChairTemplate")
+	spinTemplate = scriptParent:WaitForChild("SpinTemplate")
+
+	-- Get game elements
+	game = ReplicatedStorage:WaitForChild("SeatGame")
+	seats = game:WaitForChild("SeatModels")
+	sounds = game:WaitForChild("Sounds")
+	hoverSound = sounds:WaitForChild("Hover")
+	clickSound = sounds:WaitForChild("Click")
+	rollSound = sounds:WaitForChild("Roll")
+	rewardSound = sounds:WaitForChild("Reward")
+	rng = require(game.Modules.RNGModule)
+	spin = require(scriptParent.SpinModule)
+
+	-- Setup UI
+	invFrame.Visible = false
+	spinFrame.Visible = false
+
+	setupButton(invButton)
+	setupButton(spinButton)
+	setupButton(spinAction)
+	setupButton(invClose)
+	setupButton(spinClose)
+
+	invButton.MouseButton1Click:Connect(toggleInv)
+	spinButton.MouseButton1Click:Connect(toggleSpin)
+	invClose.MouseButton1Click:Connect(function()
+		playSound(clickSound)
+		closeInv()
+	end)
+	spinClose.MouseButton1Click:Connect(function()
+		playSound(clickSound)
+		hide(spinFrame)
+	end)
+end
+
+function UIController:KnitStart()
+	-- Get DataService reference
+	DataService = Knit.GetService("DataService")
+
+	-- Init Spin (pass DataService instead of RemoteFunction)
+	spin:Init({
+		spinList = spinList,
+		spinContainer = spinContainer,
+		picker = picker,
+		spinButton = spinAction,
+		models = rng:GetSeatModels(),
+		rollSound = rollSound,
+		rewardSound = rewardSound,
+		rngModule = rng,
+		createDisplayFunc = createSpin,
+		dataService = DataService -- Changed from dataRemote to dataService
+	})
+
+	print("✓ UIController Initialized", {
+		Buttons = "Inventory, Spin",
+		Animations = "Button hover/press effects",
+		Viewports = "3D seat previews with rotation"
+	})
+end
+
+return UIController
