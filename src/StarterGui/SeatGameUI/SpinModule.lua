@@ -6,8 +6,7 @@ local SoundService = game:GetService("SoundService")
 local SpinModule = {}
 
 --// Config
-local SPIN_DURATION = 4.5
-local SETTLE_DURATION = 0.3
+local SPIN_DURATION = 5
 local ITEMS_PER_SET = 50
 local NUMBER_OF_SETS = 4
 
@@ -16,19 +15,12 @@ local connection = nil
 local soundClones = {}
 local isSpinning = false
 
---// Easing Functions
-local function easeOutCubic(t)
-	return 1 - math.pow(1 - t, 3)
+--// Easing Function
+local function easeOutQuart(t)
+	return 1 - math.pow(1 - t, 4)
 end
 
-local function easeInOutQuart(t)
-	if t < 0.5 then
-		return 8 * t * t * t * t
-	else
-		return 1 - math.pow(-2 * t + 2, 4) / 2
-	end
-end
-
+--// Sound Functions
 local function playSound(sound)
 	local clone = sound:Clone()
 	clone.Parent = SoundService
@@ -74,13 +66,22 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 		end
 	end
 
-	for i = 1, ITEMS_PER_SET * NUMBER_OF_SETS do
-		local randomModel = models[math.random(1, #models)]
-		local display = createDisplayFunc(randomModel, rngModule)
+	local wonSeat = rngModule:GetWeightedRandom()
+	local totalItems = ITEMS_PER_SET * NUMBER_OF_SETS
+
+	for i = 1, totalItems do
+		local model
+		if i == math.floor(totalItems * 0.85) then
+			model = wonSeat
+		else
+			model = models[math.random(1, #models)]
+		end
+
+		local display = createDisplayFunc(model, rngModule)
 		display.LayoutOrder = i
 		display.Parent = spinList
 
-		if i % 10 == 0 then
+		if i % 20 == 0 then
 			task.wait()
 		end
 	end
@@ -105,78 +106,55 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 
 	local itemWidth = firstItem.AbsoluteSize.X
 	local containerWidth = spinContainer.AbsoluteSize.X
-	local targetIndex = math.random(140, 160)
-	local basePosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
-	local overshoot = itemWidth * 1.5
-	local targetScroll = basePosition + overshoot
+	local targetIndex = math.floor(totalItems * 0.85)
+	local targetPosition = (targetIndex - 1) * itemWidth - (containerWidth / 2) + (itemWidth / 2)
+
 	local startTime = os.clock()
-	local lastSoundPosition = -itemWidth
-	local settleStartTime = nil
-	local settleStartPosition = 0
+	local lastSoundPos = 0
 
 	connection = RunService.Heartbeat:Connect(function()
 		local elapsed = os.clock() - startTime
+		local progress = math.min(elapsed / SPIN_DURATION, 1)
+		local easedProgress = easeOutQuart(progress)
+		local currentPos = easedProgress * targetPosition
 
-		if settleStartTime then
-			local settleElapsed = os.clock() - settleStartTime
-			if settleElapsed >= SETTLE_DURATION then
-				self:Stop()
-				spinList.CanvasPosition = Vector2.new(basePosition, 0)
+		spinList.CanvasPosition = Vector2.new(currentPos, 0)
 
-				local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
-				local closestItem = nil
-				local closestDistance = math.huge
-
-				for _, child in spinList:GetChildren() do
-					if child:IsA("GuiObject") then
-						local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
-						local distance = math.abs(itemCenter - pickerCenter)
-						if distance < closestDistance then
-							closestDistance = distance
-							closestItem = child
-						end
-					end
-				end
-
-				local wonSeatName = nil
-				if closestItem then
-					local nameLabel = closestItem:FindFirstChild("Name")
-					if nameLabel then
-						wonSeatName = nameLabel.Text
-					end
-				end
-
-				isSpinning = false
-				if onComplete then onComplete(wonSeatName) end
-				return
-			end
-
-			local settleProgress = settleElapsed / SETTLE_DURATION
-			local easedProgress = easeOutCubic(settleProgress)
-			local currentPosition = settleStartPosition + (basePosition - settleStartPosition) * easedProgress
-			spinList.CanvasPosition = Vector2.new(currentPosition, 0)
-
-			if currentPosition - lastSoundPosition >= itemWidth * 0.8 then
-				playSound(rollSound)
-				lastSoundPosition = currentPosition
-			end
-			return
-		end
-
-		if elapsed >= SPIN_DURATION then
-			settleStartTime = os.clock()
-			settleStartPosition = spinList.CanvasPosition.X
-			return
-		end
-
-		local scrollProgress = elapsed / SPIN_DURATION
-		local easedProgress = easeInOutQuart(scrollProgress)
-		local scrollPosition = easedProgress * targetScroll
-		spinList.CanvasPosition = Vector2.new(scrollPosition, 0)
-
-		if scrollPosition - lastSoundPosition >= itemWidth * 0.8 then
+		if currentPos - lastSoundPos >= itemWidth then
 			playSound(rollSound)
-			lastSoundPosition = scrollPosition
+			lastSoundPos = currentPos
+		end
+
+		if progress >= 1 then
+			self:Stop()
+			spinList.CanvasPosition = Vector2.new(targetPosition, 0)
+
+			local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
+			local closestItem = nil
+			local closestDistance = math.huge
+
+			for _, child in spinList:GetChildren() do
+				if child:IsA("GuiObject") then
+					local itemCenter = child.AbsolutePosition.X + (child.AbsoluteSize.X / 2)
+					local distance = math.abs(itemCenter - pickerCenter)
+					if distance < closestDistance then
+						closestDistance = distance
+						closestItem = child
+					end
+				end
+			end
+
+			local wonSeatName = nil
+			if closestItem then
+				local nameLabel = closestItem:FindFirstChild("Name")
+				if nameLabel then
+					wonSeatName = nameLabel.Text
+				end
+			end
+
+			isSpinning = false
+			if onComplete then onComplete(wonSeatName) end
+			return
 		end
 	end)
 end

@@ -35,6 +35,7 @@ local soundsFolder = seatGame:WaitForChild("Sounds")
 local hoverSound = soundsFolder:WaitForChild("Hover")
 local clickSound = soundsFolder:WaitForChild("Click")
 local rollSound = soundsFolder:WaitForChild("Roll")
+local rewardSound = soundsFolder:WaitForChild("Reward")
 local rngModule = require(seatGame.Modules.RNGModule)
 local spinModule = require(script:WaitForChild("SpinModule"))
 local dataRemote = seatGame:WaitForChild("DataRemote")
@@ -282,6 +283,7 @@ local function performSpin()
 
 	spinModule:StartSpin(spinList, spinContainer, picker, models, rollSound, rngModule, createSpinDisplay, function(wonSeatName)
 		if wonSeatName then
+			playSound(rewardSound)
 			local success = dataRemote:InvokeServer("UnlockChair", wonSeatName)
 			if success then
 				print("Unlocked new seat:", wonSeatName)
