@@ -44,6 +44,7 @@ local hoverSound = nil
 local clickSound = nil
 local rollSound = nil
 local rewardSound = nil
+local wooshSound = nil
 local rng = nil
 local spin = nil
 
@@ -297,6 +298,10 @@ equipChair = function(chairName)
 	end)
 
 	updateInventory()
+
+	invFrame.Visible = false
+	invOpen = false
+	playSound(wooshSound)
 end
 
 unequipChair = function()
@@ -430,6 +435,7 @@ function UIController:KnitInit()
 	clickSound = sounds:WaitForChild("Click")
 	rollSound = sounds:WaitForChild("Roll")
 	rewardSound = sounds:WaitForChild("Reward")
+	wooshSound = sounds:WaitForChild("Woosh")
 	rng = require(seatGame.Modules.RNGModule)
 	spin = require(seatGame.Modules.SpinModule)
 
