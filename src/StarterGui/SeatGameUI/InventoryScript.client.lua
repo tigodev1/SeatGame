@@ -202,7 +202,7 @@ local function populateSpinList()
 
 	for loop = 1, 4 do
 		for _, model in ipairs(selectedSeats) do
-			local display = createSpinDisplay(model)
+			local display = createSpinDisplay(model, rngModule)
 			display.Parent = spinList
 		end
 		if loop < 4 then
