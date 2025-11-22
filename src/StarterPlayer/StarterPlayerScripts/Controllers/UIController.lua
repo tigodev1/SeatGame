@@ -223,7 +223,7 @@ updateInventory = function()
 
 	-- Get equipped chair from server (using Knit)
 	local success, result = pcall(function()
-		return DataService:GetEquippedChair()
+		return DataService:GetEquippedChair():await()
 	end)
 
 	if success and result then
@@ -233,7 +233,7 @@ updateInventory = function()
 	-- Get owned chairs list
 	local owned = {}
 	local ownedSuccess, ownedResult = pcall(function()
-		return DataService:GetOwnedChairs()
+		return DataService:GetOwnedChairs():await()
 	end)
 
 	if ownedSuccess and ownedResult then
