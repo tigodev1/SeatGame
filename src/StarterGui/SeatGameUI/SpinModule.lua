@@ -1,7 +1,9 @@
-local SpinModule = {}
-
+--// Services
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+
+--// Module
+local SpinModule = {}
 
 --// Config
 local SPIN_DURATION = 4
@@ -19,8 +21,13 @@ local function playSound(sound)
 	clone:Play()
 	table.insert(soundClones, clone)
 	task.delay(sound.TimeLength, function()
-		clone:Destroy()
-		table.remove(soundClones, table.find(soundClones, clone))
+		if clone and clone.Parent then
+			clone:Destroy()
+		end
+		local index = table.find(soundClones, clone)
+		if index then
+			table.remove(soundClones, index)
+		end
 	end)
 end
 
@@ -30,13 +37,16 @@ function SpinModule:Stop()
 		connection = nil
 	end
 
-	for _, sound in soundClones do
-		if sound then
+	local sounds = soundClones
+	soundClones = {}
+
+	for _, sound in sounds do
+		if sound and sound.Parent then
 			sound:Stop()
 			sound:Destroy()
 		end
 	end
-	soundClones = {}
+
 	isSpinning = false
 end
 
@@ -84,7 +94,6 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 	local targetIndex = math.random(140, 160)
 	local targetPosition = (targetIndex - 1) * itemWidth + (itemWidth / 2) - (containerWidth / 2)
 	local targetScroll = targetPosition
-
 	local startTime = os.clock()
 	local currentItemIndex = -1
 
@@ -94,7 +103,6 @@ function SpinModule:StartSpin(spinList, spinContainer, picker, models, rollSound
 		if elapsed >= SPIN_DURATION then
 			self:Stop()
 			spinList.CanvasPosition = Vector2.new(targetScroll, 0)
-
 			task.wait(0.2)
 
 			local pickerCenter = picker.AbsolutePosition.X + (picker.AbsoluteSize.X / 2)
