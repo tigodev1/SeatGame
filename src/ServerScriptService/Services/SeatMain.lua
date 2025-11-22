@@ -50,15 +50,9 @@ local function createSeatAtPosition(seatPosition, player)
 
 	local seatClone = defaultSeat:Clone()
 
-	-- Find the seat part within the model (assumes there's a Seat object)
-	local seatPart = seatClone:FindFirstChildWhichIsA("Seat") or seatClone:FindFirstChild("Seat")
-
-	if not seatPart then
-		-- If no Seat found, look for VehicleSeat
-		seatPart = seatClone:FindFirstChildWhichIsA("VehicleSeat")
-	end
-
-	if not seatPart then
+	-- Get the Seat instance from the model
+	local seatPart = seatClone:FindFirstChild("Seat")
+	if not seatPart or not seatPart:IsA("Seat") then
 		seatClone:Destroy()
 		return nil
 	end
@@ -156,8 +150,6 @@ local function seatPlayer(player)
 
 	-- Disable player controls after they're seated
 	setupPlayerControls(player, seatPart)
-
-	print("Player", player.Name, "seated at position", seatPosition.Name)
 end
 
 -- Handle player joining
@@ -202,61 +194,11 @@ local function onPlayerRemoving(player)
 	end
 end
 
--- Validate setup before starting
-local function validateSetup()
-	local issues = {}
-
-	-- Check if SeatsPlacing has any children
-	if #SeatsPlacing:GetChildren() == 0 then
-		table.insert(issues, "⚠️ No seat positions found in Workspace > SeatsPlacing! Create numbered folders (1, 2, 3...)")
-	else
-		-- Check first position for proper structure
-		local firstPos = SeatsPlacing:GetChildren()[1]
-		if not firstPos:FindFirstChild("Seat") then
-			table.insert(issues, "⚠️ Seat positions need a 'Seat' folder inside each numbered folder")
-		elseif not firstPos.Seat:FindFirstChild("AnchorPoint") then
-			table.insert(issues, "⚠️ Each Seat folder needs an 'AnchorPoint' part")
-		end
-	end
-
-	-- Check for Default seat model
-	if not SeatModels:FindFirstChild("Default") then
-		table.insert(issues, "⚠️ No 'Default' seat model found in ReplicatedStorage > SeatGame > SeatModels!")
-	else
-		local defaultModel = SeatModels.Default
-		local hasSeat = defaultModel:FindFirstChildWhichIsA("Seat") or defaultModel:FindFirstChildWhichIsA("VehicleSeat")
-		if not hasSeat then
-			table.insert(issues, "⚠️ Default model needs a Seat or VehicleSeat part inside it!")
-		end
-	end
-
-	if #issues > 0 then
-		warn("========================================")
-		warn("🪑 SEAT GAME SETUP ISSUES DETECTED:")
-		for _, issue in ipairs(issues) do
-			warn(issue)
-		end
-		warn("========================================")
-		warn("Players will NOT be seated until these issues are fixed!")
-		return false
-	end
-
-	return true
-end
-
 -- Initialize
-local setupValid = validateSetup()
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
 
-if setupValid then
-	print("✅ SeatMain initialized successfully!")
-
-	Players.PlayerAdded:Connect(onPlayerAdded)
-	Players.PlayerRemoving:Connect(onPlayerRemoving)
-
-	-- Handle existing players (in case script runs after players join)
-	for _, player in ipairs(Players:GetPlayers()) do
-		task.spawn(onPlayerAdded, player)
-	end
-else
-	warn("❌ SeatMain NOT initialized - fix setup issues above")
+-- Handle existing players
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, player)
 end
