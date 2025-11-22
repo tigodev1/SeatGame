@@ -48,11 +48,15 @@ function DataManager:OwnsChair(player, chairName)
 end
 
 function DataManager:AddChair(player, chairName)
-	local data = self:GetData(player)
+	local profile = self:GetProfile(player)
+	if not profile then return false end
+
+	local data = profile.Data
 	if not data then return false end
 
 	if not data.OwnedChairs[chairName] then
 		data.OwnedChairs[chairName] = true
+		profile:Save()
 		return true
 	end
 

@@ -103,10 +103,20 @@ local function createViewportCamera(viewport)
 	return camera
 end
 
-local function setupChairInViewport(viewport, chairModel, rotating)
+local function setupChairInViewport(viewport, chairModel, rotating, isOwned)
 	local camera = createViewportCamera(viewport)
 	local clone = chairModel:Clone()
 	clone.Parent = viewport
+
+	if isOwned == false then
+		for _, descendant in clone:GetDescendants() do
+			if descendant:IsA("BasePart") then
+				descendant.Color = Color3.fromRGB(20, 20, 20)
+			elseif descendant:IsA("MeshPart") then
+				descendant.Color = Color3.fromRGB(20, 20, 20)
+			end
+		end
+	end
 
 	local cframe, size = clone:GetBoundingBox()
 	local distance = math.max(size.X, size.Y, size.Z) * 1.0
@@ -134,23 +144,7 @@ local function createChairDisplay(chairModel, isOwned)
 	local nameLabel = template:FindFirstChild("Name")
 
 	if viewport then
-		setupChairInViewport(viewport, chairModel, true)
-
-		if not isOwned then
-			local colorCorrection = Instance.new("ColorCorrectionEffect")
-			colorCorrection.Saturation = -1
-			colorCorrection.Brightness = -0.8
-			colorCorrection.Contrast = -0.5
-			colorCorrection.Parent = viewport
-
-			local overlay = Instance.new("Frame")
-			overlay.Size = UDim2.new(1, 0, 1, 0)
-			overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-			overlay.BackgroundTransparency = 0.6
-			overlay.BorderSizePixel = 0
-			overlay.ZIndex = 10
-			overlay.Parent = viewport
-		end
+		setupChairInViewport(viewport, chairModel, true, isOwned)
 	end
 
 	if nameLabel then
@@ -169,7 +163,7 @@ local function createSpinDisplay(chairModel, rngMod)
 	local rarityFrame = template:FindFirstChild("Rarity")
 
 	if viewport then
-		setupChairInViewport(viewport, chairModel, false)
+		setupChairInViewport(viewport, chairModel, false, true)
 	end
 
 	if nameLabel then
