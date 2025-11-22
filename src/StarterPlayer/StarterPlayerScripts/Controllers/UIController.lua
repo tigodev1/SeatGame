@@ -36,6 +36,7 @@ local picker = nil
 local spinAction = nil
 local chairTemplate = nil
 local spinTemplate = nil
+local particlePart = nil
 
 local seatGame = nil
 local seats = nil
@@ -302,6 +303,32 @@ equipChair = function(chairName)
 	invFrame.Visible = false
 	invOpen = false
 	playSound(wooshSound)
+
+	local player = game:GetService("Players").LocalPlayer
+	local character = player.Character
+	if character and particlePart then
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			local particleClone = particlePart:Clone()
+			particleClone.Position = hrp.Position
+			particleClone.Parent = workspace
+
+			local emitter = particleClone:FindFirstChildOfClass("ParticleEmitter")
+			if emitter then
+				emitter.Enabled = true
+
+				task.delay(1.5, function()
+					if emitter then
+						emitter.Enabled = false
+					end
+					task.wait(0.5)
+					if particleClone then
+						particleClone:Destroy()
+					end
+				end)
+			end
+		end
+	end
 end
 
 unequipChair = function()
@@ -427,6 +454,7 @@ function UIController:KnitInit()
 	local templatesFolder = script.Parent.Parent:WaitForChild("Templates")
 	chairTemplate = templatesFolder:WaitForChild("ChairTemplate")
 	spinTemplate = templatesFolder:WaitForChild("SpinTemplate")
+	particlePart = templatesFolder:WaitForChild("ParticlePart")
 
 	seatGame = ReplicatedStorage:WaitForChild("SeatGame")
 	seats = seatGame:WaitForChild("SeatModels")
